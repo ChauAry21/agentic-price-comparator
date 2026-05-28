@@ -57,11 +57,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>me.paulschwarz</groupId>
-      <artifactId>spring-dotenv</artifactId>
-      <version>4.0.0</version>
-    </dependency>
-    <dependency>
       <groupId>com.openai</groupId>
       <artifactId>openai-java</artifactId>
       <version>2.4.0</version>

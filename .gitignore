@@ -25,7 +25,8 @@ dist-ssr
 
 # Backend
 target/
-.env
+Backend/src/main/resources/application.properties
+Backend/.env
 *.class
 *.jar
 *.war
