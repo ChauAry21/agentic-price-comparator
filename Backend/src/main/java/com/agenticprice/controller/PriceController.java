@@ -1,5 +1,7 @@
 package com.agenticprice.controller;
 
+import com.agenticprice.agent.PriceComparisonAgent;
+import com.agenticprice.api.PriceComparisonResponse;
 import com.agenticprice.scraper.PriceResult;
 import com.agenticprice.service.ScraperService;
 import lombok.RequiredArgsConstructor;
@@ -13,12 +15,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PriceController {
 
+    private final PriceComparisonAgent priceComparisonAgent;
     private final ScraperService scraperService;
 
     @GetMapping("/search")
-    public ResponseEntity<List<PriceResult>> search(@RequestParam String query) {
-        List<PriceResult> results = scraperService.search(query);
-        return ResponseEntity.ok(results);
+    public ResponseEntity<PriceComparisonResponse> search(@RequestParam String query) {
+        return ResponseEntity.ok(priceComparisonAgent.compare(query));
     }
 
     @PostMapping("/scrape")

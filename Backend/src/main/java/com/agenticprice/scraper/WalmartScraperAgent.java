@@ -16,26 +16,27 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class AmazonScraperAgent implements ScraperAgent {
+public class WalmartScraperAgent implements ScraperAgent {
 
     private final OpenAIService openAIService;
 
     @Override
     public String getRetailerName() {
-        return "Amazon";
+        return "Walmart";
     }
 
     @Override
     public List<PriceResult> scrape(String productQuery) {
         try {
-            String url = "https://www.amazon.com/s?k=" + productQuery.replace(" ", "+");
+            String url = "https://www.walmart.com/search?q=" + productQuery.replace(" ", "+");
             Document doc = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                     .header("Accept-Language", "en-US,en;q=0.9")
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                     .timeout(10000)
                     .get();
 
-            Elements items = doc.select("div[data-component-type=s-search-result]");
+            Elements items = doc.select("[data-item-id]");
 
             List<CompletableFuture<PriceResult>> futures = items.stream()
                     .limit(5)
@@ -44,12 +45,14 @@ public class AmazonScraperAgent implements ScraperAgent {
                             String html = item.outerHtml();
                             String price = openAIService.extractPrice(html);
                             String productUrl = openAIService.extractProductUrl(html);
-                            String title = item.select("h2 span").text();
+                            String title = item.select("[data-automation-id=product-title]").text();
+                            if (title.isBlank()) title = item.select("span.lh-title").text();
                             if (price.equals("PRICE_NOT_FOUND") || title.isBlank()) return null;
-                            String fullUrl = productUrl.startsWith("/") ? "https://www.amazon.com" + productUrl : productUrl;
-                            return new PriceResult("Amazon", title, price, "USD", fullUrl);
+                            String cleanUrl = productUrl.replace("'", "").replace("\"", "").trim();
+                            String fullUrl = cleanUrl.startsWith("/") ? "https://www.walmart.com" + cleanUrl : cleanUrl;
+                            return new PriceResult("Walmart", title, price, "USD", fullUrl);
                         } catch (Exception e) {
-                            log.warn("Failed to process Amazon item: {}", e.getMessage());
+                            log.warn("Failed to process Walmart item: {}", e.getMessage());
                             return null;
                         }
                     }))
@@ -61,7 +64,7 @@ public class AmazonScraperAgent implements ScraperAgent {
                     .toList();
 
         } catch (Exception e) {
-            log.error("Amazon scrape failed for query '{}': {}", productQuery, e.getMessage());
+            log.error("Walmart scrape failed for query '{}': {}", productQuery, e.getMessage());
             return List.of();
         }
     }

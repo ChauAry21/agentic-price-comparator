@@ -11,13 +11,10 @@ import com.agenticprice.scraper.ScraperAgent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
-import java.text.NumberFormat;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -30,15 +27,26 @@ public class ScraperService {
     private final RetailerRepository retailerRepository;
     private final PriceSnapshotRepository priceSnapshotRepository;
 
+    public List<String> getRetailerNames() {
+        return scraperAgents.stream()
+                .map(ScraperAgent::getRetailerName)
+                .toList();
+    }
+
     public List<PriceResult> search(String rawQuery) {
         String parsedQuery = openAIService.parseQuery(rawQuery);
         log.info("Parsed query '{}' -> '{}'", rawQuery, parsedQuery);
 
-        return scraperAgents.stream()
-                .flatMap(agent -> {
+        List<CompletableFuture<List<PriceResult>>> futures = scraperAgents.stream()
+                .map(agent -> CompletableFuture.supplyAsync(() -> {
                     log.info("Running scraper: {}", agent.getRetailerName());
-                    return agent.scrape(parsedQuery).stream();
-                })
+                    return agent.scrape(parsedQuery);
+                }))
+                .toList();
+
+        return futures.stream()
+                .map(CompletableFuture::join)
+                .flatMap(List::stream)
                 .toList();
     }
 
