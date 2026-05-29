@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import searchIcon from './assets/searchbar.jpg'
 import robotIcon from './assets/Robot.jpg'
