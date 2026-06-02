@@ -4,6 +4,7 @@ import com.agenticprice.scraper.PriceResult;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -12,6 +13,11 @@ public class PriceComparisonResponse {
     private String query;
     private int resultCount;
     private List<String> retailersQueried;
-    private List<String> retailersWithResults;
+    private List<String> retailerWithResults;
+    private String bestRetailer;
+    private BigDecimal lowestPrice;
+    private BigDecimal highestPrice;
+    private BigDecimal averagePrice;
+    private BigDecimal potentialSavings;
     private List<PriceResult> results;
 }
