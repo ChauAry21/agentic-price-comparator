@@ -94,8 +94,8 @@ const Dashboard = () => {
                     {response.retailersQueried.map(r => (
                         <span
                             key={r}
-                            className={`retailer-badge ${response.retailersWithResults.includes(r) ? 'active' : 'inactive'}`}
-                            style={{ borderColor: response.retailersWithResults.includes(r) ? RETAILER_COLORS[r] || '#555' : '#333' }}
+                            className={`retailer-badge ${response.retailerWithResults.includes(r) ? 'active' : 'inactive'}`}
+                            style={{ borderColor: response.retailerWithResults.includes(r) ? RETAILER_COLORS[r] || '#555' : '#333' }}
                         >
                     {r}
                   </span>
