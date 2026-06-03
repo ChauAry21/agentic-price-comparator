@@ -12,7 +12,7 @@ export interface PriceComparisonResponse {
     query: string;
     resultCount: number;
     retailersQueried: string[];
-    retailersWithResults: string[];
+    retailerWithResults: string[];
     results: PriceResult[];
 }
 
