@@ -150,7 +150,6 @@ PriceResult bestDeal = getBestDeal(deduped);
             return BigDecimal.ZERO;
         }
     }
-    }
 
     private String extractProductKey(String url) {
         if (url == null) return "";
