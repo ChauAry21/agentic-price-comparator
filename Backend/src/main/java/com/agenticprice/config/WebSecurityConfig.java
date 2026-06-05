@@ -27,7 +27,12 @@ public class WebSecurityConfig {
             .csrf(csrf -> csrf.disable()) 
             // 3. Define open access routes vs protected areas
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify-2fa").permitAll() 
+                .requestMatchers("/api/auth/signup",
+                    "/api/auth/login",
+                    "/api/auth/verify-2fa",
+                    "/api/prices/**",
+                    "/api/alerts/**"
+                ).permitAll() 
                 .anyRequest().authenticated()
             )
             .formLogin(Customizer.withDefaults());
