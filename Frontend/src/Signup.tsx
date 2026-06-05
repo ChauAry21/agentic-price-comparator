@@ -7,9 +7,9 @@ const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState(''); // New state for error messages
+  const [error, setError] = useState(''); 
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     // 1. Email check (simple regex)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
@@ -29,10 +29,28 @@ const Signup = () => {
       return;
     }
 
-    // If all checks pass
     setError('');
-    console.log("Signup successful!");
-    navigate('/dashboard');
+
+    try {
+      // 🚀 Make the network request to your backend registration endpoint
+      const response = await fetch('http://localhost:8080/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log("Signup successful!");
+        // Navigate users to the login portal after registration
+        navigate('/login');
+      } else {
+        setError(data.error || 'Registration failed. Try a different email.');
+      }
+    } catch (err) {
+      setError('Could not connect to the registration server.');
+    }
   };
 
   return (
@@ -41,7 +59,6 @@ const Signup = () => {
       <button className="back-button" onClick={() => navigate('/')}>← Back</button>
       <h2>Create Account</h2>
       
-      {/* Display error message if it exists */}
       {error && <p style={{ color: 'red', fontSize: '14px' }}>{error}</p>}
 
       <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />

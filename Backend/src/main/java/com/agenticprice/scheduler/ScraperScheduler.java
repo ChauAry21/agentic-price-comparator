@@ -22,7 +22,7 @@ public class ScraperScheduler {
     @Value("${scraper.queries:laptop,headphones,keyboard}")
     private String defaultQueries;
 
-    @Scheduled(cron = "${SCRAPER_CRON:0 0 */6 * * *}")
+    @Scheduled(cron = "${SCRAPER_CRON:0 0 /6 * *}")
     public void runScheduledScrape() {
         log.info("Running scheduled scrape...");
         List<String> queries = List.of(defaultQueries.split(","));
