@@ -44,7 +44,7 @@ const Dashboard = () => {
         <aside className="dashboard-sidebar">
           <div className="sidebar-logo">
             <img src={logoIcon} alt="Logo" />
-            <p>PriceHawk <span>AI</span></p>
+            <p>PricePilot <span>AI</span></p>
           </div>
           <nav className="sidebar-nav">
             <button className="active">Search</button>
