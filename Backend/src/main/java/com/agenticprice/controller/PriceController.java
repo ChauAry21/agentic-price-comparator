@@ -3,13 +3,10 @@ package com.agenticprice.controller;
 import com.agenticprice.agent.PriceComparisonAgent;
 import com.agenticprice.api.PriceComparisonResponse;
 import com.agenticprice.repository.SearchCacheRepository;
-import com.agenticprice.scraper.PriceResult;
 import com.agenticprice.service.ScraperService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/prices")

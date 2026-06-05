@@ -73,7 +73,7 @@ public class PriceComparisonAgent {
                 .distinct()
                 .toList();
 
-PriceResult bestDeal = getBestDeal(deduped);
+        PriceResult bestDeal = getBestDeal(deduped);
         BigDecimal lowestPrice = getLowestPrice(deduped);
         BigDecimal highestPrice = getHighestPrice(deduped);
         BigDecimal averagePrice = getAveragePrice(deduped);
@@ -157,12 +157,9 @@ PriceResult bestDeal = getBestDeal(deduped);
             URI uri = new URI(url);
             String path = uri.getPath();
             Matcher m = Pattern.compile("/dp/([A-Z0-9]{10})").matcher(path);
-
             if (m.find()) return m.group(1);
-
             String[] parts = path.split("/");
             String last = parts[parts.length - 1];
-
             return last.isEmpty() ? parts[parts.length - 2] : last;
         } catch (Exception e) {
             return url.split("\\?")[0];
