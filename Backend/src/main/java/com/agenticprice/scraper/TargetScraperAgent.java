@@ -7,7 +7,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -18,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 public class TargetScraperAgent implements ScraperAgent {
 
     private final OpenAIService openAIService;
+    private final PlaywrightService playwrightService;
 
     @Override
     public String getRetailerName() {
@@ -28,18 +28,12 @@ public class TargetScraperAgent implements ScraperAgent {
     public List<PriceResult> scrape(String productQuery) {
         try {
             String url = "https://www.target.com/s?searchTerm=" + productQuery.replace(" ", "+");
-            Document doc = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                    .header("Accept-Language", "en-US,en;q=0.9")
-                    .timeout(10000)
-                    .get();
+            String html = playwrightService.fetchRenderedHtml(url);
+            if (html.isBlank()) return List.of();
 
+            Document doc = Jsoup.parse(html);
             Elements items = doc.select("div[data-test='@web/site-top-of-funnel/ProductCardWrapper']");
-
-            if (items.isEmpty()) {
-                log.debug("ProductCardWrapper selector returned 0 results, trying article fallback");
-                items = doc.select("article");
-            }
+            if (items.isEmpty()) items = doc.select("article");
 
             log.info("Target found {} potential product items", items.size());
 
@@ -47,18 +41,13 @@ public class TargetScraperAgent implements ScraperAgent {
                     .limit(5)
                     .map(item -> CompletableFuture.supplyAsync(() -> {
                         try {
-                            String html = item.outerHtml();
-                            String price = openAIService.extractPrice(html);
-                            String productUrl = openAIService.extractProductUrl(html);
+                            String itemHtml = item.outerHtml();
+                            String price = openAIService.extractPrice(itemHtml);
+                            String productUrl = openAIService.extractProductUrl(itemHtml);
                             String title = item.select("a[href*='/p/']").attr("aria-label");
-                            if (title.isBlank()) {
-                                title = item.select("h2").text();
-                            }
-                            if (price.equals("PRICE_NOT_FOUND") || title.isBlank()) {
-                                return null;
-                            }
-                            String fullUrl = productUrl.startsWith("/") ? "https://www.target.com" + productUrl
-                                    : productUrl;
+                            if (title.isBlank()) title = item.select("h2").text();
+                            if (price.equals("PRICE_NOT_FOUND") || title.isBlank()) return null;
+                            String fullUrl = productUrl.startsWith("/") ? "https://www.target.com" + productUrl : productUrl;
                             return new PriceResult("Target", title, price, "USD", fullUrl);
                         } catch (Exception e) {
                             log.warn("Failed to process Target item: {}", e.getMessage());

@@ -5,10 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -19,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 public class TemuScraperAgent implements ScraperAgent {
 
     private final OpenAIService openAIService;
+    private final PlaywrightService playwrightService;
 
     @Override
     public String getRetailerName() {
@@ -29,24 +28,24 @@ public class TemuScraperAgent implements ScraperAgent {
     public List<PriceResult> scrape(String productQuery) {
         try {
             String url = "https://www.temu.com/search_result.html?search_key=" + productQuery.replace(" ", "+");
-            Document doc = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                    .header("Accept-Language", "en-US,en;q=0.9")
-                    .timeout(10000)
-                    .get();
+            String html = playwrightService.fetchRenderedHtml(url);
+            if (html.isBlank()) return List.of();
+
+            Document doc = Jsoup.parse(html);
             Elements items = doc.select("div._29dBm1gx.autoFitGoodsList");
+
+            log.info("Temu found {} potential product items", items.size());
+
             List<CompletableFuture<PriceResult>> futures = items.stream()
                     .limit(5)
                     .map(item -> CompletableFuture.supplyAsync(() -> {
                         try {
-                            String html = item.outerHtml();
-                            String price = openAIService.extractPrice(html);
-                            String productUrl = openAIService.extractProductUrl(html);
+                            String itemHtml = item.outerHtml();
+                            String price = openAIService.extractPrice(itemHtml);
+                            String productUrl = openAIService.extractProductUrl(itemHtml);
                             String title = item.select("h2 span").text();
-                            if (price.equals("PRICE_NOT_FOUND") || title.isBlank())
-                                return null;
-                            String fullUrl = productUrl.startsWith("/") ? "https://www.temu.com" + productUrl
-                                    : productUrl;
+                            if (price.equals("PRICE_NOT_FOUND") || title.isBlank()) return null;
+                            String fullUrl = productUrl.startsWith("/") ? "https://www.temu.com" + productUrl : productUrl;
                             return new PriceResult("Temu", title, price, "USD", fullUrl);
                         } catch (Exception e) {
                             log.warn("Failed to process Temu item: {}", e.getMessage());
@@ -61,7 +60,7 @@ public class TemuScraperAgent implements ScraperAgent {
                     .toList();
 
         } catch (Exception e) {
-            log.error("Temu scraping failed for query '{}': {} ", productQuery, e.getMessage());
+            log.error("Temu scrape failed for query '{}': {}", productQuery, e.getMessage());
             return List.of();
         }
     }
