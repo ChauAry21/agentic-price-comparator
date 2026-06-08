@@ -37,4 +37,22 @@ public class NotificationService {
             log.error("Failed to send alert email to {}: {}", toEmail, e.getMessage());
         }
     }
+
+    public void sendOtpEmail(String toEmail, String code) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Your PriceHawk login code");
+            message.setText(
+                    "Your PriceHawk login code is: " + code + "\n\n" +
+                            "This code expires in 10 minutes.\n\n" +
+                            "If you didn't request this, ignore this email."
+            );
+            mailSender.send(message);
+            log.info("OTP email sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send OTP email to {}: {}", toEmail, e.getMessage());
+        }
+    }
 }
