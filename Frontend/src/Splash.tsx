@@ -16,7 +16,7 @@ const Splash = () => {
         <nav>
           <span>About Us</span>
           <span>Contact Us</span>
-          <button onClick={() => navigate('/signup')}>Get Started</button>
+          <button onClick={() => navigate('/login')}>Get Started</button>
         </nav>
       </header>
 
@@ -28,7 +28,7 @@ const Splash = () => {
           {isSearching ? (
             <div className="auth-prompt">
               <p>Please log in or sign up to start your search!</p>
-              <button className="auth-button" onClick={() => navigate('/login')}>Login / Sign Up</button>
+              <button className="auth-button" onClick={() => navigate('/login')}>Login</button>
             </div>
           ) : (
             <input 

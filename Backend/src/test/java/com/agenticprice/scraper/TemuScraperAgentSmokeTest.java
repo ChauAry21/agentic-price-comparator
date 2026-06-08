@@ -12,7 +12,7 @@ public class TemuScraperAgentSmokeTest {
         String query = args.length > 0 ? String.join(" ", args) : "wireless earbuds";
         System.out.println("Running Temu smoke test for query: " + query);
 
-        TemuScraperAgent scraper = new TemuScraperAgent(new StubOpenAIService());
+        TemuScraperAgent scraper = new TemuScraperAgent(new StubOpenAIService(), new PlaywrightService());
         List<PriceResult> results = scraper.scrape(query);
 
         System.out.println("Found " + results.size() + " results:");

@@ -43,7 +43,7 @@ class PriceComparisonAgentTest {
         PriceComparisonResponse response = agent.compare("iphone");
 
         assertEquals(2, response.getResultCount());
-        assertEquals(List.of("Amazon", "Walmart"), response.getRetailersWithResults());
+        assertEquals(List.of("Amazon", "Walmart"), response.getRetailerWithResults());
         assertEquals("Walmart", response.getBestRetailer());
         assertEquals(new BigDecimal("729.50"), response.getLowestPrice());
         assertEquals(new BigDecimal("799.00"), response.getHighestPrice());
@@ -71,6 +71,6 @@ class PriceComparisonAgentTest {
         PriceComparisonResponse response = new ObjectMapper()
                 .readValue(cachedJson, PriceComparisonResponse.class);
 
-        assertEquals(List.of("Amazon"), response.getRetailersWithResults());
+        assertEquals(List.of("Amazon"), response.getRetailerWithResults());
     }
 }

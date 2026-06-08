@@ -3,11 +3,13 @@ package com.agenticprice.api;
 import com.agenticprice.scraper.PriceResult;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 public class PriceComparisonResponse {
     private String query;
