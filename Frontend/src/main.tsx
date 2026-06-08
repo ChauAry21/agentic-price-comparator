@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import Splash from './Splash.tsx'
 import Login from './Login.tsx'
-import Signup from './Signup.tsx'
 import Dashboard from './Dashboard.tsx'
 
 createRoot(document.getElementById('root')!).render(
@@ -13,7 +12,6 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/" element={<Splash />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
