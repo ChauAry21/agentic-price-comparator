@@ -544,3 +544,29 @@ body { overflow-x: hidden; }
   .analytics-panel { grid-template-columns: 1fr; }
   .dashboard-main { padding: 24px 16px; }
 }
+
+.settings-section {
+  border: 1px solid #242428;
+  border-radius: 8px;
+  padding: 24px;
+  background: #151518;
+}
+.settings-section h2 { margin: 0; color: #ffffff; font-size: 28px; line-height: 1.2; }
+.section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.history-list { display: grid; gap: 10px; margin-top: 18px; }
+.history-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  border: 1px solid #2f2f35;
+  border-radius: 8px;
+  padding: 0 14px;
+  background: #101014;
+  color: #f8fafc;
+  cursor: pointer;
+}
+.history-list button:hover { border-color: #22c55e; }
+.history-list span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+.history-list strong { color: #86efac; font-size: 13px; white-space: nowrap; }

@@ -14,6 +14,15 @@ const RETAILER_COLORS: Record<string, string> = {
 };
 
 type SortOption = 'price-asc' | 'price-desc' | 'savings-desc';
+type DashboardView = 'search' | 'history' | 'settings';
+
+const SETTINGS_KEY = 'pricepilot-dashboard-settings';
+const RECENT_SEARCHES_KEY = 'pricepilot-recent-searches';
+
+type RetailerResponse = PriceComparisonResponse & {
+  retailersWithResults?: string[];
+  retailerWithResults?: string[];
+};
 
 const parsePrice = (price: string) => parseFloat(price.replace(/[^0-9.]/g, '')) || 0;
 
@@ -37,16 +46,41 @@ const calculateSavingsPercent = (result: PriceResult, results: PriceResult[]) =>
   return ((highestPrice - parsePrice(result.price)) / highestPrice) * 100;
 };
 
+const getRetailersWithResults = (response: PriceComparisonResponse) => {
+  const r = response as RetailerResponse;
+  return r.retailersWithResults || r.retailerWithResults || [];
+};
+
+const loadSavedSettings = () => {
+  try {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    return saved ? JSON.parse(saved) : { defaultSort: 'price-asc', minSavingsPercent: 0 };
+  } catch {
+    return { defaultSort: 'price-asc', minSavingsPercent: 0 };
+  }
+};
+
+const loadRecentSearches = () => {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]') as string[];
+  } catch {
+    return [];
+  }
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [view, setView] = useState<'search' | 'settings'>('search');
+  const [activeView, setActiveView] = useState<DashboardView>('search');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [response, setResponse] = useState<PriceComparisonResponse | null>(null);
   const [alertQuery, setAlertQuery] = useState<string | null>(null);
-  const [sortOption, setSortOption] = useState<SortOption>('price-asc');
+  const [sortOption, setSortOption] = useState<SortOption>(() => loadSavedSettings().defaultSort);
   const [retailerFilter, setRetailerFilter] = useState('all');
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => loadRecentSearches());
+
+  const retailersWithResults = response ? getRetailersWithResults(response) : [];
 
   const availableRetailers = useMemo(
       () => response ? Array.from(new Set(response.results.map(r => r.retailerName))).sort() : [],
@@ -55,8 +89,10 @@ const Dashboard = () => {
 
   const visibleResults = useMemo(() => {
     if (!response) return [];
+    const savedPrefs = loadSavedSettings();
     return response.results
         .filter(r => retailerFilter === 'all' ? true : r.retailerName === retailerFilter)
+        .filter(r => calculateSavingsPercent(r, response.results) >= savedPrefs.minSavingsPercent)
         .sort((a, b) => {
           if (sortOption === 'price-desc') return parsePrice(b.price) - parsePrice(a.price);
           if (sortOption === 'savings-desc') {
@@ -66,16 +102,29 @@ const Dashboard = () => {
         });
   }, [response, retailerFilter, sortOption]);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  const saveRecentSearch = (q: string) => {
+    setRecentSearches(current => {
+      const updated = [q, ...current.filter(item => item !== q)].slice(0, 6);
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleSearch = async (nextQuery = query) => {
+    const trimmed = nextQuery.trim();
+    if (!trimmed) return;
     setLoading(true);
     setError('');
     setResponse(null);
+    setQuery(trimmed);
+    setActiveView('search');
+    const savedPrefs = loadSavedSettings();
+    setSortOption(savedPrefs.defaultSort);
     try {
-      const data = await searchPrices(query.trim());
+      const data = await searchPrices(trimmed);
       setResponse(data);
-      setSortOption('price-asc');
       setRetailerFilter('all');
+      saveRecentSearch(trimmed);
     } catch (e: any) {
       setError(e.message || 'Something went wrong');
     } finally {
@@ -83,8 +132,13 @@ const Dashboard = () => {
     }
   };
 
+  const clearHistory = () => {
+    setRecentSearches([]);
+    localStorage.removeItem(RECENT_SEARCHES_KEY);
+  };
+
   const clearFilters = () => {
-    setSortOption('price-asc');
+    setSortOption(loadSavedSettings().defaultSort);
     setRetailerFilter('all');
   };
 
@@ -98,9 +152,9 @@ const Dashboard = () => {
             <p>PricePilot <span>AI</span></p>
           </div>
           <nav className="sidebar-nav">
-            <button className={view === 'search' ? 'active' : ''} onClick={() => setView('search')}>Search</button>
-            <button>History</button>
-            <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>Settings</button>
+            <button className={activeView === 'search' ? 'active' : ''} onClick={() => setActiveView('search')}>Search</button>
+            <button className={activeView === 'history' ? 'active' : ''} onClick={() => setActiveView('history')}>History</button>
+            <button className={activeView === 'settings' ? 'active' : ''} onClick={() => setActiveView('settings')}>Settings</button>
           </nav>
           <div className="sidebar-footer">
             <div className="user-profile">
@@ -110,9 +164,35 @@ const Dashboard = () => {
         </aside>
 
         <main className="dashboard-main">
-          {view === 'settings' ? (
-              <Settings />
-          ) : (
+          {activeView === 'settings' && <Settings />}
+
+          {activeView === 'history' && (
+              <section className="settings-section">
+                <div className="section-heading">
+                  <div>
+                    <h2>Search History</h2>
+                    <p className="search-subtitle">Run a previous comparison again with one click.</p>
+                  </div>
+                  {recentSearches.length > 0 && (
+                      <button className="clear-filters-btn" type="button" onClick={clearHistory}>Clear history</button>
+                  )}
+                </div>
+                {recentSearches.length === 0 ? (
+                    <div className="no-results">No recent searches yet.</div>
+                ) : (
+                    <div className="history-list">
+                      {recentSearches.map(item => (
+                          <button key={item} type="button" onClick={() => handleSearch(item)}>
+                            <span>{item}</span>
+                            <strong>Search again</strong>
+                          </button>
+                      ))}
+                    </div>
+                )}
+              </section>
+          )}
+
+          {activeView === 'search' && (
               <>
                 <div className="search-section">
                   <h2>Find the Best Price</h2>
@@ -126,7 +206,7 @@ const Dashboard = () => {
                         onChange={e => setQuery(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSearch()}
                     />
-                    <button className="search-btn" onClick={handleSearch} disabled={loading}>
+                    <button className="search-btn" onClick={() => handleSearch()} disabled={loading}>
                       {loading ? 'Searching...' : 'Search'}
                     </button>
                   </div>
@@ -149,8 +229,8 @@ const Dashboard = () => {
                           {(response.retailersQueried || []).map(r => (
                               <span
                                   key={r}
-                                  className={`retailer-badge ${(response.retailerWithResults || []).includes(r) ? 'active' : 'inactive'}`}
-                                  style={{ borderColor: (response.retailerWithResults || []).includes(r) ? RETAILER_COLORS[r] || '#555' : '#333' }}
+                                  className={`retailer-badge ${retailersWithResults.includes(r) ? 'active' : 'inactive'}`}
+                                  style={{ borderColor: retailersWithResults.includes(r) ? RETAILER_COLORS[r] || '#555' : '#333' }}
                               >
                         {r}
                       </span>
@@ -174,7 +254,7 @@ const Dashboard = () => {
                             </div>
                             <div className="analytics-card">
                               <span>Retailers</span>
-                              <strong>{(response.retailerWithResults || []).length}</strong>
+                              <strong>{retailersWithResults.length}</strong>
                             </div>
                           </div>
                       )}
@@ -186,11 +266,7 @@ const Dashboard = () => {
                             <div className="results-toolbar">
                               <div className="filter-group">
                                 <label htmlFor="sort-results">Sort</label>
-                                <select
-                                    id="sort-results"
-                                    value={sortOption}
-                                    onChange={e => setSortOption(e.target.value as SortOption)}
-                                >
+                                <select id="sort-results" value={sortOption} onChange={e => setSortOption(e.target.value as SortOption)}>
                                   <option value="price-asc">Cheapest first</option>
                                   <option value="price-desc">Highest price</option>
                                   <option value="savings-desc">Highest savings</option>
@@ -198,27 +274,19 @@ const Dashboard = () => {
                               </div>
                               <div className="filter-group">
                                 <label htmlFor="retailer-filter">Retailer</label>
-                                <select
-                                    id="retailer-filter"
-                                    value={retailerFilter}
-                                    onChange={e => setRetailerFilter(e.target.value)}
-                                >
+                                <select id="retailer-filter" value={retailerFilter} onChange={e => setRetailerFilter(e.target.value)}>
                                   <option value="all">All retailers</option>
                                   {availableRetailers.map(retailer => (
                                       <option key={retailer} value={retailer}>{retailer}</option>
                                   ))}
                                 </select>
                               </div>
-                              <span className="visible-count">
-                        Showing {visibleResults.length} of {response.results.length}
-                      </span>
-                              <button className="clear-filters-btn" type="button" onClick={clearFilters}>
-                                Clear filters
-                              </button>
+                              <span className="visible-count">Showing {visibleResults.length} of {response.results.length}</span>
+                              <button className="clear-filters-btn" type="button" onClick={clearFilters}>Clear filters</button>
                             </div>
 
                             {visibleResults.length === 0 ? (
-                                <div className="no-results">No results match that retailer filter. Try clearing filters.</div>
+                                <div className="no-results">No results match your filters. Try clearing filters.</div>
                             ) : (
                                 <table className="results-table">
                                   <thead>
@@ -247,16 +315,10 @@ const Dashboard = () => {
                                   </span>
                                           </td>
                                           <td className="price">{result.price}</td>
-                                          <td className="savings">
-                                            {calculateSavingsPercent(result, response.results).toFixed(0)}%
-                                          </td>
+                                          <td className="savings">{calculateSavingsPercent(result, response.results).toFixed(0)}%</td>
                                           <td className="actions-cell">
-                                            <a href={result.url} target="_blank" rel="noopener noreferrer" className="view-btn">
-                                              View →
-                                            </a>
-                                            <button className="btn-alert" onClick={() => setAlertQuery(result.productName)}>
-                                              Set Alert
-                                            </button>
+                                            <a href={result.url} target="_blank" rel="noopener noreferrer" className="view-btn">View →</a>
+                                            <button className="btn-alert" onClick={() => setAlertQuery(result.productName)}>Set Alert</button>
                                           </td>
                                         </tr>
                                     );
