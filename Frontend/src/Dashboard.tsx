@@ -14,10 +14,16 @@ const RETAILER_COLORS: Record<string, string> = {
 };
 
 type SortOption = 'price-asc' | 'price-desc' | 'savings-desc';
-type DashboardView = 'search' | 'history' | 'settings';
+type DashboardView = 'search' | 'saved' | 'history' | 'settings';
 
 const SETTINGS_KEY = 'pricepilot-dashboard-settings';
 const RECENT_SEARCHES_KEY = 'pricepilot-recent-searches';
+const SAVED_PRODUCTS_KEY = 'pricepilot-saved-products';
+
+type SavedProduct = PriceResult & {
+  savedAt: string;
+  sourceQuery: string;
+};
 
 type RetailerResponse = PriceComparisonResponse & {
   retailersWithResults?: string[];
@@ -68,6 +74,20 @@ const loadRecentSearches = () => {
   }
 };
 
+const loadSavedProducts = () => {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_PRODUCTS_KEY) || '[]') as SavedProduct[];
+  } catch {
+    return [];
+  }
+};
+
+const getProductKey = (product: PriceResult) =>
+    product.url || `${product.retailerName}-${product.productName}-${product.price}`;
+
+const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : 'Something went wrong';
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<DashboardView>('search');
@@ -79,6 +99,7 @@ const Dashboard = () => {
   const [sortOption, setSortOption] = useState<SortOption>(() => loadSavedSettings().defaultSort);
   const [retailerFilter, setRetailerFilter] = useState('all');
   const [recentSearches, setRecentSearches] = useState<string[]>(() => loadRecentSearches());
+  const [savedProducts, setSavedProducts] = useState<SavedProduct[]>(() => loadSavedProducts());
 
   const retailersWithResults = response ? getRetailersWithResults(response) : [];
 
@@ -125,8 +146,8 @@ const Dashboard = () => {
       setResponse(data);
       setRetailerFilter('all');
       saveRecentSearch(trimmed);
-    } catch (e: any) {
-      setError(e.message || 'Something went wrong');
+    } catch (e) {
+      setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -135,6 +156,40 @@ const Dashboard = () => {
   const clearHistory = () => {
     setRecentSearches([]);
     localStorage.removeItem(RECENT_SEARCHES_KEY);
+  };
+
+  const isProductSaved = (product: PriceResult) =>
+      savedProducts.some(saved => getProductKey(saved) === getProductKey(product));
+
+  const saveProduct = (product: PriceResult) => {
+    setSavedProducts(current => {
+      const key = getProductKey(product);
+      if (current.some(saved => getProductKey(saved) === key)) return current;
+      const updated = [
+        {
+          ...product,
+          savedAt: new Date().toISOString(),
+          sourceQuery: response?.query || query,
+        },
+        ...current,
+      ];
+      localStorage.setItem(SAVED_PRODUCTS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const removeSavedProduct = (product: PriceResult) => {
+    setSavedProducts(current => {
+      const key = getProductKey(product);
+      const updated = current.filter(saved => getProductKey(saved) !== key);
+      localStorage.setItem(SAVED_PRODUCTS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const clearSavedProducts = () => {
+    setSavedProducts([]);
+    localStorage.removeItem(SAVED_PRODUCTS_KEY);
   };
 
   const clearFilters = () => {
@@ -153,18 +208,65 @@ const Dashboard = () => {
           </div>
           <nav className="sidebar-nav">
             <button className={activeView === 'search' ? 'active' : ''} onClick={() => setActiveView('search')}>Search</button>
+            <button className={activeView === 'saved' ? 'active' : ''} onClick={() => setActiveView('saved')}>
+              Saved Products {savedProducts.length > 0 ? `(${savedProducts.length})` : ''}
+            </button>
             <button className={activeView === 'history' ? 'active' : ''} onClick={() => setActiveView('history')}>History</button>
             <button className={activeView === 'settings' ? 'active' : ''} onClick={() => setActiveView('settings')}>Settings</button>
           </nav>
           <div className="sidebar-footer">
             <div className="user-profile">
-              <span onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>→ Logout</span>
+              <span onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>Logout</span>
             </div>
           </div>
         </aside>
 
         <main className="dashboard-main">
           {activeView === 'settings' && <Settings />}
+
+          {activeView === 'saved' && (
+              <section className="settings-section">
+                <div className="section-heading">
+                  <div>
+                    <h2>Saved Products</h2>
+                    <p className="search-subtitle">Keep products you want to revisit without running the same search again.</p>
+                  </div>
+                  {savedProducts.length > 0 && (
+                      <button className="clear-filters-btn" type="button" onClick={clearSavedProducts}>Clear saved</button>
+                  )}
+                </div>
+                {savedProducts.length === 0 ? (
+                    <div className="no-results">
+                      No saved products yet. Search for a product and click "Save" on anything you want to track.
+                    </div>
+                ) : (
+                    <div className="saved-products-list">
+                      {savedProducts.map(product => (
+                          <article className="saved-product-card" key={getProductKey(product)}>
+                            <div>
+                              <div className="saved-product-meta">
+                                <span className="retailer-tag" style={{ color: RETAILER_COLORS[product.retailerName] || '#aaa' }}>
+                                  {product.retailerName}
+                                </span>
+                                <span>Saved from "{product.sourceQuery}"</span>
+                              </div>
+                              <h3>{product.productName}</h3>
+                              <p className="saved-date">Saved {new Date(product.savedAt).toLocaleDateString()}</p>
+                            </div>
+                            <div className="saved-product-side">
+                              <strong>{product.price}</strong>
+                              <div className="saved-product-actions">
+                                <a href={product.url} target="_blank" rel="noopener noreferrer" className="view-btn">View</a>
+                                <button className="btn-alert" type="button" onClick={() => setAlertQuery(product.productName)}>Set Alert</button>
+                                <button className="btn-remove" type="button" onClick={() => removeSavedProduct(product)}>Remove</button>
+                              </div>
+                            </div>
+                          </article>
+                      ))}
+                    </div>
+                )}
+              </section>
+          )}
 
           {activeView === 'history' && (
               <section className="settings-section">
@@ -317,7 +419,14 @@ const Dashboard = () => {
                                           <td className="price">{result.price}</td>
                                           <td className="savings">{calculateSavingsPercent(result, response.results).toFixed(0)}%</td>
                                           <td className="actions-cell">
-                                            <a href={result.url} target="_blank" rel="noopener noreferrer" className="view-btn">View →</a>
+                                            <a href={result.url} target="_blank" rel="noopener noreferrer" className="view-btn">View</a>
+                                            <button
+                                                className={`btn-save ${isProductSaved(result) ? 'saved' : ''}`}
+                                                type="button"
+                                                onClick={() => isProductSaved(result) ? removeSavedProduct(result) : saveProduct(result)}
+                                            >
+                                              {isProductSaved(result) ? 'Saved' : 'Save'}
+                                            </button>
                                             <button className="btn-alert" onClick={() => setAlertQuery(result.productName)}>Set Alert</button>
                                           </td>
                                         </tr>
