@@ -8,11 +8,15 @@ import com.agenticprice.repository.ProductRepository;
 import com.agenticprice.repository.RetailerRepository;
 import com.agenticprice.scraper.PriceResult;
 import com.agenticprice.scraper.ScraperAgent;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -26,6 +30,7 @@ public class ScraperService {
     private final ProductRepository productRepository;
     private final RetailerRepository retailerRepository;
     private final PriceSnapshotRepository priceSnapshotRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<String> getRetailerNames() {
         return scraperAgents.stream()
@@ -100,5 +105,31 @@ public class ScraperService {
         } catch (Exception e) {
             return BigDecimal.ZERO;
         }
+    }
+
+    public List<PriceResult> getRanking(List<PriceResult> products, String query) {
+        String raw_ranking = openAIService.rankProducts(products, query);
+        List<Integer> indices = new ArrayList<>();
+        try {
+            JsonNode root = objectMapper.readTree(raw_ranking);
+            JsonNode indicesNode = root.get("ordered_indices");
+            if (indicesNode != null && indicesNode.isArray()) {
+                for (JsonNode node : indicesNode) {
+                    indices.add(node.asInt());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse ranking JSON: {}", e.getMessage());
+        }
+        if (indices.isEmpty()) {
+            return products;
+        }
+        List<PriceResult> ranked = new ArrayList<>();
+        for (Integer index : indices) {
+            if (index != null && index >= 0 && index < products.size()) {
+                ranked.add(products.get(index));
+            }
+        }
+        return ranked.size() == products.size() ? ranked : products;
     }
 }

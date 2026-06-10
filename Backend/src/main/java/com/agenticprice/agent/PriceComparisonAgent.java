@@ -61,10 +61,8 @@ public class PriceComparisonAgent {
                                 r -> extractProductKey(r.getUrl()),
                                 r -> r,
                                 (a, b) -> a,
-                                LinkedHashMap::new
-                        ),
-                        m -> new ArrayList<>(m.values())
-                ));
+                                LinkedHashMap::new),
+                        m -> new ArrayList<>(m.values())));
 
         List<String> queried = scraperService.getRetailerNames();
 
@@ -72,16 +70,16 @@ public class PriceComparisonAgent {
                 .map(PriceResult::getRetailerName)
                 .distinct()
                 .toList();
-
-        PriceResult bestDeal = getBestDeal(deduped);
-        BigDecimal lowestPrice = getLowestPrice(deduped);
-        BigDecimal highestPrice = getHighestPrice(deduped);
-        BigDecimal averagePrice = getAveragePrice(deduped);
+        List<PriceResult> deduped_ranked = scraperService.getRanking(deduped, query);
+        PriceResult bestDeal = getBestDeal(deduped_ranked);
+        BigDecimal lowestPrice = getLowestPrice(deduped_ranked);
+        BigDecimal highestPrice = getHighestPrice(deduped_ranked);
+        BigDecimal averagePrice = getAveragePrice(deduped_ranked);
         BigDecimal potentialSavings = highestPrice.subtract(lowestPrice).max(BigDecimal.ZERO);
 
         PriceComparisonResponse response = new PriceComparisonResponse(
                 query,
-                deduped.size(),
+                deduped_ranked.size(),
                 queried,
                 withResults,
                 bestDeal != null ? bestDeal.getRetailerName() : null,
@@ -89,8 +87,7 @@ public class PriceComparisonAgent {
                 highestPrice,
                 averagePrice,
                 potentialSavings,
-                deduped
-        );
+                deduped_ranked);
 
         try {
             SearchCache entry = new SearchCache();
@@ -134,16 +131,19 @@ public class PriceComparisonAgent {
                 .map(result -> parsePrice(result.getPrice()))
                 .filter(price -> price.compareTo(BigDecimal.ZERO) > 0)
                 .toList();
-        if (prices.isEmpty()) return BigDecimal.ZERO;
+        if (prices.isEmpty())
+            return BigDecimal.ZERO;
         BigDecimal total = prices.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         return total.divide(BigDecimal.valueOf(prices.size()), 2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal parsePrice(String price) {
-        if (price == null || price.isBlank()) return BigDecimal.ZERO;
+        if (price == null || price.isBlank())
+            return BigDecimal.ZERO;
         try {
             String cleaned = price.replaceAll("[^0-9.]", "");
-            if (cleaned.isBlank()) return BigDecimal.ZERO;
+            if (cleaned.isBlank())
+                return BigDecimal.ZERO;
             return new BigDecimal(cleaned);
         } catch (NumberFormatException e) {
             log.warn("Unable to parse price value: {}", price);
@@ -152,12 +152,14 @@ public class PriceComparisonAgent {
     }
 
     private String extractProductKey(String url) {
-        if (url == null) return "";
+        if (url == null)
+            return "";
         try {
             URI uri = new URI(url);
             String path = uri.getPath();
             Matcher m = Pattern.compile("/dp/([A-Z0-9]{10})").matcher(path);
-            if (m.find()) return m.group(1);
+            if (m.find())
+                return m.group(1);
             String[] parts = path.split("/");
             String last = parts[parts.length - 1];
             return last.isEmpty() ? parts[parts.length - 2] : last;
