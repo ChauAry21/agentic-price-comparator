@@ -19,6 +19,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.agenticprice.util.ProductKeyUtil;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -58,7 +60,7 @@ public class PriceComparisonAgent {
                 .filter(r -> r.getUrl() != null && !r.getUrl().isBlank())
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(
-                                r -> extractProductKey(r.getUrl()),
+                                r -> ProductKeyUtil.extractProductKey(r.getUrl()),
                                 r -> r,
                                 (a, b) -> a,
                                 LinkedHashMap::new
@@ -148,21 +150,6 @@ public class PriceComparisonAgent {
         } catch (NumberFormatException e) {
             log.warn("Unable to parse price value: {}", price);
             return BigDecimal.ZERO;
-        }
-    }
-
-    private String extractProductKey(String url) {
-        if (url == null) return "";
-        try {
-            URI uri = new URI(url);
-            String path = uri.getPath();
-            Matcher m = Pattern.compile("/dp/([A-Z0-9]{10})").matcher(path);
-            if (m.find()) return m.group(1);
-            String[] parts = path.split("/");
-            String last = parts[parts.length - 1];
-            return last.isEmpty() ? parts[parts.length - 2] : last;
-        } catch (Exception e) {
-            return url.split("\\?")[0];
         }
     }
 }
