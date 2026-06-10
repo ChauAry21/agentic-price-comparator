@@ -31,11 +31,16 @@ public enum PriceHawkPrompt {
                                         "Return only the URL, nothing else. If no URL is found, return URL_NOT_FOUND. HTML: "),
         RANK_PRODUCTS(
                         """
-                                        Sort these products from best to worst based on this query.
+                                        Rank these products by overall semantic fit to the query, not by exact word overlap.
 
-                                        Look for explicit requests in the query and rank related products higher.
+                                        Prefer products whose attributes, specs, and intent match the query best.
+                                        If the query includes explicit preferences or constraints, treat them as high-priority signals.
+                                        Treat paraphrases and equivalent feature descriptions as matching signals.
+                                        Example: "Laptop with good memory" would favor results with "32 GB ram" in product_name over "16 GB memory".
 
-                                        Break ties based on which product has the lowest price.
+                                        Favor products with numeric measures on fields on interest.
+                                        Example: Query: "Earbuds with long battery life." Rank "Airpod pro 2 60H battery" over "Airpod pro 2 long battery life".
+                                        If there are no explicit request, sort based on general semantic fit, then favor lower prices.
 
                                         Return only valid JSON in this exact format:
                                         {
