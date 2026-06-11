@@ -22,7 +22,6 @@ import com.agenticprice.tracking.api.CreateTrackedQueryRequest;
 import com.agenticprice.tracking.model.QueryPriceSnapshot;
 import com.agenticprice.tracking.api.PriceHistoryResponse;
 import com.agenticprice.tracking.repository.QueryPriceSnapshotRepository;
-import com.agenticprice.tracking.service.QueryResolutionService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;

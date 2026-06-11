@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import java.util.UUID;
+import java.util.List;
 
 import com.agenticprice.tracking.service.TrackingService;
 import com.agenticprice.tracking.api.CreateTrackedQueryRequest;
@@ -28,6 +29,11 @@ public class TrackingController {
     @PostMapping("/queries")
     public ResponseEntity<TrackedQuery> createTrackedQuery(@RequestHeader("X-User-Email") String email, @RequestBody CreateTrackedQueryRequest request) {
         return ResponseEntity.ok(trackingService.createTrackedQuery(email, request));
+    }
+
+    @GetMapping("/queries")
+    public ResponseEntity<List<TrackedQuery>> listTrackedQueries(@RequestHeader("X-User-Email") String email) {
+        return ResponseEntity.ok(trackingService.listTrackedQueries(email));
     }
 
     @GetMapping("/queries/{id}/history")
