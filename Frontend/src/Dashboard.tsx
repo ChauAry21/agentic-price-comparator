@@ -283,11 +283,11 @@ const Dashboard = () => {
           <button className={activeView === 'saved' ? 'active' : ''} onClick={() => setActiveView('saved')}>
             Saved Products {savedProducts.length > 0 ? `(${savedProducts.length})` : ''}
           </button>
+          <button className={activeView === 'history' ? 'active' : ''} onClick={() => setActiveView('history')}>History</button>
+          <button className={activeView === 'settings' ? 'active' : ''} onClick={() => setActiveView('settings')}>Settings</button>
           <button className={activeView === 'tracked' ? 'active' : ''} onClick={() => setActiveView('tracked')}>
             Tracked {trackedQueries.length > 0 ? `(${trackedQueries.length})` : ''}
           </button>
-          <button className={activeView === 'history' ? 'active' : ''} onClick={() => setActiveView('history')}>History</button>
-          <button className={activeView === 'settings' ? 'active' : ''} onClick={() => setActiveView('settings')}>Settings</button>
         </nav>
         <div className="sidebar-footer">
           <div className="user-profile">
@@ -408,31 +408,31 @@ const Dashboard = () => {
               </section>
           )}
 
-          {activeView === 'history' && (
-              <section className="settings-section">
-                <div className="section-heading">
-                  <div>
-                    <h2>Search History</h2>
-                    <p className="search-subtitle">Run a previous comparison again with one click.</p>
-                  </div>
-                  {recentSearches.length > 0 && (
-                      <button className="clear-filters-btn" type="button" onClick={clearHistory}>Clear history</button>
-                  )}
-                </div>
-                {recentSearches.length === 0 ? (
-                    <div className="no-results">No recent searches yet.</div>
-                ) : (
-                    <div className="history-list">
-                      {recentSearches.map(item => (
-                          <button key={item} type="button" onClick={() => handleSearch(item)}>
-                            <span>{item}</span>
-                            <strong>Search again</strong>
-                          </button>
-                      ))}
-                    </div>
-                )}
-              </section>
-          )}
+        {activeView === 'history' && (
+          <section className="settings-section">
+            <div className="section-heading">
+              <div>
+                <h2>Search History</h2>
+                <p className="search-subtitle">Run a previous comparison again with one click.</p>
+              </div>
+              {recentSearches.length > 0 && (
+                <button className="clear-filters-btn" type="button" onClick={clearHistory}>Clear history</button>
+              )}
+            </div>
+            {recentSearches.length === 0 ? (
+              <div className="no-results">No recent searches yet.</div>
+            ) : (
+              <div className="history-list">
+                {recentSearches.map(item => (
+                  <button key={item} type="button" onClick={() => handleSearch(item)}>
+                    <span>{item}</span>
+                    <strong>Search again</strong>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {activeView === 'search' && (
           <>
@@ -582,7 +582,6 @@ const Dashboard = () => {
             )}
           </>
         )}
-
       </main>
 
       {alertQuery && (

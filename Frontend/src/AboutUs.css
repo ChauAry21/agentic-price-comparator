@@ -1,0 +1,125 @@
+/* Base styles for the dark theme */
+.about-page {
+  background-color: #000000;
+  color: #ffffff;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  padding: 0;
+  margin: 0;
+}
+
+/* Header & Nav styling matching your splash page structure */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+}
+
+.logo img {
+  height: 40px; /* Adjust according to your asset file size */
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  color: #aaaaaa;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+
+.nav-btn:hover, .nav-btn.active {
+  color: #ffffff;
+}
+
+.nav-btn.get-started {
+  background-color: #ffffff;
+  color: #000000;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* Page Layout Container */
+.about-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* Welcome Segment centering */
+.welcome-section {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto 60px auto;
+}
+
+.welcome-section h2 {
+  font-size: 2.2rem;
+  margin-bottom: 20px;
+}
+
+.welcome-section p {
+  color: #e0e0e0;
+  line-height: 1.6;
+  font-style: italic; /* Matches the styled text weight/vibe in Figma */
+}
+
+/* Dual Column Layout */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: start;
+  margin-top: 40px;
+}
+
+.grid-col h3 {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+}
+
+.grid-col p {
+  color: #dcdcdc;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+/* Right column push matching the image layout placement offset */
+.right-col {
+  margin-top: 60px;
+}
+
+/* Meet Team Button Styling */
+.meet-team-btn {
+  background-color: #e0e0e0;
+  color: #000000;
+  border: none;
+  padding: 12px 30px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.meet-team-btn:hover {
+  background-color: #ffffff;
+}
+
+/* Responsive breakpoint for smaller desktop/tablet views */
+@media (max-width: 768px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .right-col {
+    margin-top: 0;
+  }
+}

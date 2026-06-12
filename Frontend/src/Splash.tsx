@@ -7,19 +7,24 @@ import logoIcon from './assets/logo.jpg'
 
 const Splash = () => {
   const navigate = useNavigate(); // Called at the top level
-  const [isSearching, setIsSearching] = useState(false);
+  const [isSearching, setIsSearching] = useState(false); // Manages search bar focus state
 
   return (
     <main>
+      {/* Header Navigation with working route handlers */}
       <header>
-        <div className="logo"><img src={logoIcon} alt="PricePilot AI Logo" /></div>
+        <div className="logo">
+          <img src={logoIcon} alt="PricePilot AI Logo" />
+        </div>
         <nav>
-          <span>About Us</span>
-          <span>Contact Us</span>
+          {/* Added the onClick listener to route to /about */}
+          <button onClick={() => navigate('/about')}>About Us</button>
+          <button>Contact Us</button>
           <button onClick={() => navigate('/login')}>Get Started</button>
         </nav>
       </header>
 
+      {/* Hero Section */}
       <section className="hero">
         <h1>Smart Shopping, Automated</h1>
         <p>PricePilot AI autonomously hunts, normalizes, and ranks the best deals</p>
@@ -40,10 +45,20 @@ const Splash = () => {
         </div>
       </section>
 
+      {/* Core Features Overview */}
       <section className="features">
-        <div className="feature-item"><img src={searchIcon} alt="Search" /><p>Search for Product</p></div>
-        <div className="feature-item"><img src={robotIcon} alt="Agent" /><p>Autonomous Agent Deployment</p></div>
-        <div className="feature-item"><img src={tableIcon} alt="Tables" /><p>Ranked Comparison Tables</p></div>
+        <div className="feature-item">
+          <img src={searchIcon} alt="Search" />
+          <p>Search for Product</p>
+        </div>
+        <div className="feature-item">
+          <img src={robotIcon} alt="Agent" />
+          <p>Autonomous Agent Deployment</p>
+        </div>
+        <div className="feature-item">
+          <img src={tableIcon} alt="Tables" />
+          <p>Ranked Comparison Tables</p>
+        </div>
       </section>
     </main>
   )

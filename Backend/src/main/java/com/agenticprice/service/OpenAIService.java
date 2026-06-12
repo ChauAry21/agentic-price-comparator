@@ -1,12 +1,15 @@
 package com.agenticprice.service;
 
-
 import com.agenticprice.prompt.PriceHawkPrompt;
+import com.agenticprice.scraper.PriceResult;
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.ChatModel;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -25,8 +28,7 @@ public class OpenAIService {
                 ChatCompletionCreateParams.builder()
                         .model(ChatModel.GPT_4O_MINI)
                         .addUserMessage(PriceHawkPrompt.EXTRACT_PRICE.with(rawHtml))
-                        .build()
-        );
+                        .build());
 
         return response.choices().get(0).message().content().orElse("");
     }
@@ -36,8 +38,7 @@ public class OpenAIService {
                 ChatCompletionCreateParams.builder()
                         .model(ChatModel.GPT_4O_MINI)
                         .addUserMessage(PriceHawkPrompt.EXTRACT_PRODUCT_URL.with(rawHtml))
-                        .build()
-        );
+                        .build());
         return response.choices().get(0).message().content().orElse("URL_NOT_FOUND");
     }
 
@@ -46,8 +47,7 @@ public class OpenAIService {
                 ChatCompletionCreateParams.builder()
                         .model(ChatModel.GPT_4O_MINI)
                         .addUserMessage(PriceHawkPrompt.NORMALIZE_PRODUCT_NAME.with(productName))
-                        .build()
-        );
+                        .build());
         return response.choices().get(0).message().content().orElse(productName);
     }
 
@@ -56,9 +56,18 @@ public class OpenAIService {
                 ChatCompletionCreateParams.builder()
                         .model(ChatModel.GPT_4O_MINI)
                         .addUserMessage(PriceHawkPrompt.PARSE_QUERY.with(userQuery))
-                        .build()
-        );
+                        .build());
 
-        return  response.choices().get(0).message().content().orElse("");
+        return response.choices().get(0).message().content().orElse("");
+    }
+
+    public String rankProducts(List<PriceResult> products, String userQuery) {
+        String input = "Query: " + userQuery + "Products: " + products.toString();
+        ChatCompletion response = client.chat().completions().create(
+                ChatCompletionCreateParams.builder()
+                        .model(ChatModel.GPT_4O_MINI)
+                        .addUserMessage(PriceHawkPrompt.RANK_PRODUCTS.with(input))
+                        .build());
+        return response.choices().get(0).message().content().orElse("");
     }
 }

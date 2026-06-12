@@ -13,6 +13,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -39,6 +41,7 @@ class PriceComparisonAgentTest {
         when(searchCacheRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(scraperService.search("iphone")).thenReturn(results);
         when(scraperService.getRetailerNames()).thenReturn(List.of("Amazon", "Walmart", "Newegg"));
+        when(scraperService.getRanking(anyList(), anyString())).thenAnswer(invocation -> invocation.getArgument(0));
 
         PriceComparisonResponse response = agent.compare("iphone");
 

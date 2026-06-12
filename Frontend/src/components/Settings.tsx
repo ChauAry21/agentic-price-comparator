@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAlerts, deleteAlert, type Alert } from '../api/alertApi';
 
-type SortOption = 'price-asc' | 'price-desc' | 'savings-desc';
+type SortOption = 'ranking' | 'price-asc' | 'price-desc' | 'savings-desc';
 
 interface DashboardSettings {
     defaultSort: SortOption;
@@ -11,7 +11,7 @@ interface DashboardSettings {
 const SETTINGS_KEY = 'pricepilot-dashboard-settings';
 
 const DEFAULT_SETTINGS: DashboardSettings = {
-    defaultSort: 'price-asc',
+    defaultSort: 'ranking',
     minSavingsPercent: 0,
 };
 
@@ -97,30 +97,30 @@ export default function Settings() {
                     ) : (
                         <table className="alerts-table">
                             <thead>
-                            <tr>
-                                <th>Product</th>
-                                <th>Threshold</th>
-                                <th>Email</th>
-                                <th>Status</th>
-                                <th></th>
-                            </tr>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Threshold</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
                             </thead>
                             <tbody>
-                            {alerts.map(alert => (
-                                <tr key={alert.id}>
-                                    <td>{alert.productQuery}</td>
-                                    <td>${alert.thresholdPrice}</td>
-                                    <td>{alert.email}</td>
-                                    <td>
+                                {alerts.map(alert => (
+                                    <tr key={alert.id}>
+                                        <td>{alert.productQuery}</td>
+                                        <td>${alert.thresholdPrice}</td>
+                                        <td>{alert.email}</td>
+                                        <td>
                                             <span className={`alert-status ${alert.active ? 'active' : 'triggered'}`}>
                                                 {alert.active ? 'Active' : 'Triggered'}
                                             </span>
-                                    </td>
-                                    <td>
-                                        <button className="btn-delete" onClick={() => handleDelete(alert.id)}>Delete</button>
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                        <td>
+                                            <button className="btn-delete" onClick={() => handleDelete(alert.id)}>Delete</button>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     )}
@@ -153,6 +153,7 @@ export default function Settings() {
                                 value={prefs.defaultSort}
                                 onChange={e => updatePrefs({ ...prefs, defaultSort: e.target.value as SortOption })}
                             >
+                                <option value="ranking">Most Relevant</option>
                                 <option value="price-asc">Cheapest first</option>
                                 <option value="price-desc">Highest price</option>
                                 <option value="savings-desc">Highest savings</option>

@@ -31,3 +31,9 @@ Backend/.env
 *.jar
 *.war
 *.iml
+
+# proxy-rotator
+.venv/
+__pycache__/
+*.pyc
+.env
