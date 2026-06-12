@@ -390,10 +390,13 @@ const Dashboard = () => {
                                   <p>Loading price history...</p>
                                 </div>
                             ) : (
-                                <PriceHistoryChart points={[ //{historyPoints}
+                                <PriceHistoryChart points={historyPoints} /> 
+                                /* FOR TESTING:
+                                [
                                   { scrapedAt: '2026-06-01T12:00:00Z', bestMatchedPrice: 799, bestRetailer: 'Amazon', retailerPrices: [] },
                                   { scrapedAt: '2026-06-02T12:00:00Z', bestMatchedPrice: 749, bestRetailer: 'Walmart', retailerPrices: [] },
-                                ]} />
+                                ]
+                                */
                             )}
                           </div>
                       )}
