@@ -54,7 +54,7 @@ const Login = () => {
 
   return (
       <div className="auth-container">
-        <img src={logoIcon} alt="PriceHawk AI Logo" className="auth-logo" />
+        <img src={logoIcon} alt="PricePilot AI Logo" className="auth-logo" />
         <button className="back-button" onClick={() => navigate('/')}>← Back</button>
 
         {step === 'email' ? (
