@@ -84,7 +84,7 @@ export default function Settings() {
                     <p className="settings-label">Email</p>
                     <p className="settings-value">{localStorage.getItem('user_email') || 'Not logged in'}</p>
                     <p className="settings-label" style={{ marginTop: '16px' }}>App Version</p>
-                    <p className="settings-value">PriceHawk AI v1.0</p>
+                    <p className="settings-value">PricePilot AI v1.0</p>
                 </div>
             )}
 
