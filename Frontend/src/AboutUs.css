@@ -8,7 +8,6 @@
   margin: 0;
 }
 
-/* Header & Nav styling matching your splash page structure */
 .header {
   display: flex;
   justify-content: space-between;
@@ -17,7 +16,7 @@
 }
 
 .logo img {
-  height: 40px; /* Adjust according to your asset file size */
+  height: 40px;
 }
 
 .nav-links {
@@ -46,14 +45,12 @@
   font-weight: 600;
 }
 
-/* Page Layout Container */
 .about-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 40px 20px;
 }
 
-/* Welcome Segment centering */
 .welcome-section {
   text-align: center;
   max-width: 800px;
@@ -68,10 +65,9 @@
 .welcome-section p {
   color: #e0e0e0;
   line-height: 1.6;
-  font-style: italic; /* Matches the styled text weight/vibe in Figma */
+  font-style: italic;
 }
 
-/* Dual Column Layout */
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -91,12 +87,61 @@
   margin-bottom: 30px;
 }
 
-/* Right column push matching the image layout placement offset */
 .right-col {
   margin-top: 60px;
 }
 
-/* Meet Team Button Styling */
+/* Meet the Team Section */
+.team-section {
+  margin: 60px 0;
+  text-align: center;
+}
+
+.team-section h2 {
+  font-size: 2rem;
+  margin-bottom: 40px;
+}
+
+.team-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+}
+
+.team-card {
+  background-color: #111111;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 28px 24px;
+  width: 280px;
+  text-align: left;
+  transition: border-color 0.2s;
+}
+
+.team-card:hover {
+  border-color: #555555;
+}
+
+.team-card h4 {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+  color: #ffffff;
+}
+
+.team-role {
+  font-size: 0.85rem;
+  color: #888888;
+  margin-bottom: 12px;
+  font-style: italic;
+}
+
+.team-card p:last-child {
+  color: #cccccc;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .meet-team-btn {
   background-color: #e0e0e0;
   color: #000000;
@@ -113,7 +158,6 @@
   background-color: #ffffff;
 }
 
-/* Responsive breakpoint for smaller desktop/tablet views */
 @media (max-width: 768px) {
   .content-grid {
     grid-template-columns: 1fr;
