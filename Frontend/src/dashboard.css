@@ -704,6 +704,41 @@ body { overflow-x: hidden; }
   color: #86efac;
 }
 
+.btn-compare {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #2a2a2a;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.btn-compare:hover:not(:disabled) {
+  background: #1a1a1a;
+  color: #ccc;
+  border-color: #3a3a3a;
+}
+
+.btn-compare.selected {
+  background: #1a1f3a;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+.btn-compare.selected:hover {
+  background: #162042;
+  color: #bfdbfe;
+}
+
+.btn-compare:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .btn-remove {
   padding: 5px 12px;
   border-radius: 6px;
@@ -867,4 +902,391 @@ body { overflow-x: hidden; }
   .analytics-panel { grid-template-columns: 1fr; }
   .analytics-grid { grid-template-columns: 1fr; }
   .dashboard-main { padding: 24px 16px; }
+}
+
+/* Feature-comparison UI styles. Selectors are namespaced under `compare-`
+   to avoid colliding with the rest of dashboard.css. Reuses the existing
+   .btn-primary / .btn-secondary classes for the action buttons. */
+
+
+.compare-tray {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(1100px, calc(100vw - 3rem));
+    background: #111;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 0.875rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    z-index: 50;
+}
+
+.compare-tray-summary {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.compare-tray-count {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.compare-tray-count-number {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: white;
+    line-height: 1;
+}
+
+.compare-tray-count-label {
+    color: #888;
+    font-size: 0.85rem;
+}
+
+.compare-tray-limit {
+    color: #f59e0b;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid #f59e0b;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: 0.5rem;
+}
+
+.compare-tray-chips {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    min-width: 0;
+    scrollbar-width: thin;
+}
+
+.compare-tray-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #0a0a0a;
+    border: 1px solid #2a2a2a;
+    border-radius: 16px;
+    padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+    font-size: 0.8rem;
+    color: #ccc;
+    max-width: 280px;
+    flex-shrink: 0;
+}
+
+.compare-tray-chip-retailer {
+    color: white;
+    font-weight: 500;
+}
+
+.compare-tray-chip-name {
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.compare-tray-chip-remove {
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.compare-tray-chip-remove:hover {
+    background: #2a2a2a;
+    color: white;
+}
+
+.compare-tray-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.compare-tray-error {
+    color: #f87171;
+    font-size: 0.8rem;
+    max-width: 200px;
+}
+
+/* ---------- Modal ---------- */
+
+.compare-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 2rem;
+}
+
+.compare-modal-box {
+    background: #111;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 420px;
+    max-height: calc(100vh - 4rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.compare-modal-box-wide {
+    width: min(1100px, calc(100vw - 4rem));
+    max-height: calc(100vh - 4rem);
+}
+
+.compare-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.compare-modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: white;
+}
+
+.compare-subtitle {
+    color: #888;
+    font-size: 0.85rem;
+    margin: 0.25rem 0 0 0;
+}
+
+.compare-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.compare-empty {
+    color: #888;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.compare-warnings {
+    list-style: none;
+    margin: 0;
+    padding: 0.75rem 1rem;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 8px;
+    color: #f59e0b;
+    font-size: 0.8rem;
+}
+
+.compare-warnings li {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.compare-warnings li + li {
+    margin-top: 0.25rem;
+}
+
+/* ---------- Toolbar ---------- */
+
+.compare-toolbar {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #1f1f1f;
+}
+
+.compare-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #aaa;
+    font-size: 0.85rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.compare-toggle input {
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+/* ---------- Table ---------- */
+
+.compare-table-scroll {
+    overflow: auto;
+    border: 1px solid #1f1f1f;
+    border-radius: 8px;
+    max-height: calc(100vh - 18rem);
+    flex: 1;
+}
+
+.compare-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.9rem;
+}
+
+.compare-table thead th {
+    background: #0a0a0a;
+    color: #aaa;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.7rem;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #1f1f1f;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+
+.compare-table tbody tr {
+    transition: background 0.1s;
+}
+
+.compare-table tbody tr:hover td,
+.compare-table tbody tr:hover th[scope="row"] {
+    background: #0e0e0e;
+}
+
+.compare-column-header {
+    text-align: left;
+    vertical-align: bottom;
+    min-width: 160px;
+}
+
+.compare-column-retailer {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+}
+
+.compare-column-product {
+    display: block;
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 400;
+    margin-top: 2px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.compare-feature-name-col {
+    background: #0a0a0a;
+    text-align: left;
+    font-weight: 500;
+    color: white;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid #1f1f1f;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 160px;
+    max-width: 220px;
+}
+
+.compare-table thead .compare-feature-name-col {
+    z-index: 3;
+}
+
+.compare-table tbody th[scope="row"] {
+    display: table-cell;
+}
+
+.compare-feature-name {
+    display: inline-block;
+}
+
+.compare-allsame-badge {
+    display: inline-block;
+    margin-left: 0.5rem;
+    color: #666;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid #2a2a2a;
+    border-radius: 3px;
+    padding: 1px 5px;
+    vertical-align: middle;
+}
+
+.compare-table td {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid #1f1f1f;
+    color: #ddd;
+    white-space: nowrap;
+}
+
+.compare-cell-empty {
+    color: #555;
+}
+
+.compare-row-price {
+    background: rgba(34, 197, 94, 0.04);
+}
+
+.compare-row-price .compare-feature-name-col,
+.compare-row-price:hover .compare-feature-name-col {
+    background: rgba(34, 197, 94, 0.08);
+    color: #4ade80;
+}
+
+.compare-row-price td {
+    color: white;
+    font-weight: 500;
+}
+
+.compare-row-condition .compare-feature-name-col {
+    color: #c4b5fd;
+}
+
+.compare-row-allsame .compare-feature-name-col {
+    color: #888;
+}
+
+.compare-row-allsame td {
+    color: #888;
+}
+
+.compare-empty-row {
+    text-align: center;
+    color: #666;
+    padding: 2rem;
+    font-style: italic;
 }

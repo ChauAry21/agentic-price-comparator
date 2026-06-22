@@ -2,8 +2,11 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoIcon from './assets/logo.jpg';
 import { searchPrices, type PriceComparisonResponse, type PriceResult } from './api/priceApi';
+import { extractFeatures, type FeatureExtractionResponse } from './api/featureApi';
 import AlertModal from './components/AlertModal';
 import Settings from './components/Settings';
+import CompareTray from './components/CompareTray';
+import FeatureTable from './components/FeatureTable';
 import './dashboard.css';
 
 const RETAILER_COLORS: Record<string, string> = {
@@ -19,6 +22,8 @@ type DashboardView = 'search' | 'saved' | 'history' | 'settings';
 const SETTINGS_KEY = 'pricepilot-dashboard-settings';
 const RECENT_SEARCHES_KEY = 'pricepilot-recent-searches';
 const SAVED_PRODUCTS_KEY = 'pricepilot-saved-products';
+const COMPARE_SELECTION_KEY = 'pricepilot-compare-selection';
+const MAX_COMPARE_SELECTION = 6;
 
 type SavedProduct = PriceResult & {
   savedAt: string;
@@ -82,6 +87,14 @@ const loadSavedProducts = () => {
   }
 };
 
+const loadCompareSelection = (): PriceResult[] => {
+  try {
+    return JSON.parse(localStorage.getItem(COMPARE_SELECTION_KEY) || '[]') as PriceResult[];
+  } catch {
+    return [];
+  }
+};
+
 const getProductKey = (product: PriceResult) =>
   product.url || `${product.retailerName}-${product.productName}-${product.price}`;
 
@@ -100,6 +113,10 @@ const Dashboard = () => {
   const [retailerFilter, setRetailerFilter] = useState('all');
   const [recentSearches, setRecentSearches] = useState<string[]>(() => loadRecentSearches());
   const [savedProducts, setSavedProducts] = useState<SavedProduct[]>(() => loadSavedProducts());
+  const [selectedForCompare, setSelectedForCompare] = useState<PriceResult[]>(() => loadCompareSelection());
+  const [featureResponse, setFeatureResponse] = useState<FeatureExtractionResponse | null>(null);
+  const [featureLoading, setFeatureLoading] = useState(false);
+  const [featureError, setFeatureError] = useState('');
 
   const retailersWithResults = response ? getRetailersWithResults(response) : [];
 
@@ -198,6 +215,54 @@ const Dashboard = () => {
   const clearFilters = () => {
     setSortOption(loadSavedSettings().defaultSort);
     setRetailerFilter('all');
+  };
+
+  const isProductSelectedForCompare = (product: PriceResult) =>
+    selectedForCompare.some(p => getProductKey(p) === getProductKey(product));
+
+  const updateCompareSelection = (next: PriceResult[]) => {
+    setSelectedForCompare(next);
+    localStorage.setItem(COMPARE_SELECTION_KEY, JSON.stringify(next));
+  };
+
+  const toggleCompareSelection = (product: PriceResult) => {
+    const key = getProductKey(product);
+    setFeatureError('');
+    if (isProductSelectedForCompare(product)) {
+      updateCompareSelection(selectedForCompare.filter(p => getProductKey(p) !== key));
+      return;
+    }
+    if (selectedForCompare.length >= MAX_COMPARE_SELECTION) {
+      setFeatureError(`Limit is ${MAX_COMPARE_SELECTION} products. Remove one first.`);
+      return;
+    }
+    updateCompareSelection([...selectedForCompare, product]);
+  };
+
+  const clearCompareSelection = () => {
+    updateCompareSelection([]);
+    setFeatureResponse(null);
+    setFeatureError('');
+  };
+
+  const removeFromCompare = (product: PriceResult) => {
+    const key = getProductKey(product);
+    updateCompareSelection(selectedForCompare.filter(p => getProductKey(p) !== key));
+    setFeatureError('');
+  };
+
+  const handleCompare = async () => {
+    if (selectedForCompare.length < 2) return;
+    setFeatureLoading(true);
+    setFeatureError('');
+    try {
+      const result = await extractFeatures(selectedForCompare);
+      setFeatureResponse(result);
+    } catch (e) {
+      setFeatureError(getErrorMessage(e));
+    } finally {
+      setFeatureLoading(false);
+    }
   };
 
   const bestDeal = response ? getBestDeal(response.results) : null;
@@ -431,6 +496,14 @@ const Dashboard = () => {
                                   >
                                     {isProductSaved(result) ? 'Saved' : 'Save'}
                                   </button>
+                                  <button
+                                    className={`btn-compare ${isProductSelectedForCompare(result) ? 'selected' : ''}`}
+                                    type="button"
+                                    onClick={() => toggleCompareSelection(result)}
+                                    disabled={!result.url || !result.price}
+                                  >
+                                    {isProductSelectedForCompare(result) ? '✓ Added' : '+ Compare'}
+                                  </button>
                                   <button className="btn-alert" onClick={() => setAlertQuery(result.productName)}>Set Alert</button>
                                 </td>
                               </tr>
@@ -447,8 +520,21 @@ const Dashboard = () => {
         )}
       </main>
 
+      <CompareTray
+        selected={selectedForCompare}
+        loading={featureLoading}
+        error={featureError}
+        onCompare={handleCompare}
+        onClear={clearCompareSelection}
+        onRemove={removeFromCompare}
+      />
+
       {alertQuery && (
         <AlertModal productQuery={alertQuery} onClose={() => setAlertQuery(null)} />
+      )}
+
+      {featureResponse && (
+        <FeatureTable response={featureResponse} onClose={() => setFeatureResponse(null)} />
       )}
     </div>
   );
