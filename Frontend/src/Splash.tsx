@@ -4,6 +4,7 @@ import searchIcon from './assets/searchbar.jpg'
 import robotIcon from './assets/Robot.jpg'
 import tableIcon from './assets/table.jpg'
 import logoIcon from './assets/logo.jpg'
+import { ThemeToggle } from './ThemeContext.tsx'
 
 const Splash = () => {
   const navigate = useNavigate(); // Called at the top level
@@ -17,9 +18,9 @@ const Splash = () => {
           <img src={logoIcon} alt="PricePilot AI Logo" />
         </div>
         <nav>
-          {/* Added the onClick listener to route to /about */}
           <button onClick={() => navigate('/about')}>About Us</button>
           <button>Contact Us</button>
+          <ThemeToggle />
           <button onClick={() => navigate('/login')}>Get Started</button>
         </nav>
       </header>

@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoIcon from './assets/logo.jpg';
 import { searchPrices, type PriceComparisonResponse, type PriceResult } from './api/priceApi';
 import AlertModal from './components/AlertModal';
 import Settings from './components/Settings';
+import { ThemeToggle } from './ThemeContext';
 import './dashboard.css';
 
 const RETAILER_COLORS: Record<string, string> = {
@@ -14,7 +15,7 @@ const RETAILER_COLORS: Record<string, string> = {
 };
 
 type SortOption = 'ranking' | 'price-asc' | 'price-desc' | 'savings-desc';
-type DashboardView = 'search' | 'saved' | 'history' | 'settings';
+type DashboardView = 'home' | 'search' | 'saved' | 'history' | 'settings' | 'alerts';
 
 const SETTINGS_KEY = 'pricepilot-dashboard-settings';
 const RECENT_SEARCHES_KEY = 'pricepilot-recent-searches';
@@ -88,9 +89,41 @@ const getProductKey = (product: PriceResult) =>
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Something went wrong';
 
+const getBestSavingsFromSaved = (savedProducts: SavedProduct[]): string => {
+  if (savedProducts.length === 0) return '$0';
+  const prices = savedProducts.map(p => parsePrice(p.price)).filter(p => p > 0);
+  if (prices.length < 2) return '$0';
+  const max = Math.max(...prices);
+  const min = Math.min(...prices);
+  return `$${(max - min).toFixed(0)}`;
+};
+
+const NAV_ITEMS: { view: DashboardView; emoji: string; label: string }[] = [
+  { view: 'home', emoji: '🏠', label: 'Dashboard' },
+  { view: 'search', emoji: '🔍', label: 'Search' },
+  { view: 'alerts', emoji: '🔔', label: 'Alerts' },
+  { view: 'saved', emoji: '🔖', label: 'Saved Products' },
+  { view: 'history', emoji: '📋', label: 'History' },
+  { view: 'settings', emoji: '⚙️', label: 'Settings' },
+];
+
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<DashboardView>('search');
+
+  // Handle OAuth redirect — backend sends ?oauth_email=user@gmail.com after Google/GitHub login
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthEmail = params.get('oauth_email');
+    if (oauthEmail) {
+      localStorage.setItem('user_email', oauthEmail);
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, []);
+
+  const userEmail = localStorage.getItem('user_email') || 'User';
+  const userDisplayName = userEmail.includes('@') ? userEmail.split('@')[0] : userEmail;
+
+  const [activeView, setActiveView] = useState<DashboardView>('home');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -202,129 +235,339 @@ const Dashboard = () => {
 
   const bestDeal = response ? getBestDeal(response.results) : null;
 
+  const getSmartRecommendation = (results: PriceResult[]): string => {
+    if (!results || results.length === 0) return '';
+    const best = getBestDeal(results);
+    const highest = getHighestPrice(results);
+    if (!best || !highest) return '';
+    const savings = parsePrice(highest.price) - parsePrice(best.price);
+    const savingsPct = ((savings / parsePrice(highest.price)) * 100).toFixed(0);
+    const retailers = Array.from(new Set(results.map(r => r.retailerName)));
+    const cheapestRetailer = best.retailerName;
+    if (savings < 1) {
+      return `Prices are consistent across ${retailers.length} retailer${retailers.length > 1 ? 's' : ''}. Any listing is a fair deal — pick based on shipping speed or seller trust.`;
+    }
+    if (Number(savingsPct) >= 30) {
+      return `Big price gap detected. ${cheapestRetailer} has the best deal at ${best.price}, saving you $${savings.toFixed(2)} (${savingsPct}%) compared to the highest listing. We strongly recommend going with ${cheapestRetailer}.`;
+    }
+    return `${cheapestRetailer} offers the best price at ${best.price}, saving you $${savings.toFixed(2)} (${savingsPct}%) across ${retailers.length} retailer${retailers.length > 1 ? 's' : ''}. A solid pick if price is your priority.`;
+  };
+
+  const LOADING_STEPS = [
+    'Launching AI agent...',
+    'Searching Amazon...',
+    'Searching Walmart...',
+    'Searching Newegg...',
+    'Ranking results...',
+  ];
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  useEffect(() => {
+    if (!loading) { setLoadingStep(0); return; }
+    setLoadingStep(0);
+    const intervals = LOADING_STEPS.map((_, i) =>
+      setTimeout(() => setLoadingStep(i), i * 2500)
+    );
+    return () => intervals.forEach(clearTimeout);
+  }, [loading]);
+
   return (
     <div className="dashboard-wrapper">
+      {/* Sidebar */}
       <aside className="dashboard-sidebar">
         <div className="sidebar-logo">
           <img src={logoIcon} alt="Logo" />
           <p>PricePilot <span>AI</span></p>
         </div>
+
         <nav className="sidebar-nav">
-          <button className={activeView === 'search' ? 'active' : ''} onClick={() => setActiveView('search')}>Search</button>
-          <button className={activeView === 'saved' ? 'active' : ''} onClick={() => setActiveView('saved')}>
-            Saved Products {savedProducts.length > 0 ? `(${savedProducts.length})` : ''}
-          </button>
-          <button className={activeView === 'history' ? 'active' : ''} onClick={() => setActiveView('history')}>History</button>
-          <button className={activeView === 'settings' ? 'active' : ''} onClick={() => setActiveView('settings')}>Settings</button>
+          {NAV_ITEMS.map(({ view, emoji, label }) => (
+            <button
+              key={view}
+              className={activeView === view ? 'active' : ''}
+              onClick={() => setActiveView(view)}
+            >
+              <span className="nav-emoji">{emoji}</span>
+              <span>{label}</span>
+              {view === 'saved' && savedProducts.length > 0 && (
+                <span className="nav-badge">{savedProducts.length}</span>
+              )}
+            </button>
+          ))}
         </nav>
+
+        <div className="sidebar-promo">
+          <div className="promo-icon">🚀</div>
+          <p className="promo-title">Upgrade to Pro</p>
+          <p className="promo-desc">Get unlimited searches and real-time alerts.</p>
+          <button className="promo-btn">Upgrade Now</button>
+        </div>
+
         <div className="sidebar-footer">
-          <div className="user-profile">
-            <span onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>Logout</span>
+          <div className="sidebar-theme-toggle">
+            <ThemeToggle />
           </div>
+          <div className="sidebar-user">
+            <div className="sidebar-user-avatar">{userDisplayName.charAt(0).toUpperCase()}</div>
+            <div className="sidebar-user-info">
+              <span className="sidebar-user-email">{userEmail}</span>
+            </div>
+          </div>
+          <button className="sidebar-logout" onClick={() => navigate('/')}>Logout</button>
         </div>
       </aside>
 
+      {/* Main content */}
       <main className="dashboard-main">
-        {activeView === 'settings' && <Settings />}
+        {/* Top header with search bar */}
+        <header className="dashboard-header">
+          <div className="header-search-wrapper">
+            <span className="header-search-icon">🔍</span>
+            <input
+              className="header-search-input"
+              type="text"
+              placeholder="Search for a product e.g. MacBook Pro, RTX 4090..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            />
+            <button
+              className="header-search-btn"
+              onClick={() => handleSearch()}
+              disabled={loading}
+            >
+              {loading ? 'Searching...' : 'Search'}
+            </button>
+          </div>
+        </header>
 
+        {/* Home view */}
+        {activeView === 'home' && (
+          <div className="home-view">
+            <div className="welcome-section">
+              <h1 className="welcome-title">Welcome back, {userDisplayName}! 👋</h1>
+              <p className="welcome-subtitle">Here's what's happening with your price comparisons today.</p>
+            </div>
+
+            {/* Stats row */}
+            <div className="stats-grid">
+              <div className="stats-card">
+                <div className="stats-icon stats-icon--purple">🔖</div>
+                <div className="stats-info">
+                  <span className="stats-label">Saved Products</span>
+                  <strong className="stats-value">{savedProducts.length}</strong>
+                </div>
+              </div>
+              <div className="stats-card">
+                <div className="stats-icon stats-icon--orange">🔍</div>
+                <div className="stats-info">
+                  <span className="stats-label">Recent Searches</span>
+                  <strong className="stats-value">{recentSearches.length}</strong>
+                </div>
+              </div>
+              <div className="stats-card">
+                <div className="stats-icon stats-icon--blue">🔔</div>
+                <div className="stats-info">
+                  <span className="stats-label">Active Alerts</span>
+                  <strong className="stats-value">0</strong>
+                </div>
+              </div>
+              <div className="stats-card">
+                <div className="stats-icon stats-icon--green">💰</div>
+                <div className="stats-info">
+                  <span className="stats-label">Best Savings</span>
+                  <strong className="stats-value stats-value--green">{getBestSavingsFromSaved(savedProducts)}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Searches */}
+            <section className="home-section">
+              <div className="home-section-header">
+                <h2 className="home-section-title">Recent Searches</h2>
+                {recentSearches.length > 0 && (
+                  <button className="home-section-action" onClick={clearHistory}>Clear all</button>
+                )}
+              </div>
+              {recentSearches.length === 0 ? (
+                <p className="home-empty">No recent searches yet. Use the search bar above to get started.</p>
+              ) : (
+                <div className="recent-chips">
+                  {recentSearches.map(item => (
+                    <button
+                      key={item}
+                      className="recent-chip"
+                      onClick={() => handleSearch(item)}
+                    >
+                      🔍 {item}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Saved Products */}
+            <section className="home-section">
+              <div className="home-section-header">
+                <h2 className="home-section-title">Saved Products</h2>
+                {savedProducts.length > 0 && (
+                  <button className="home-section-action" onClick={clearSavedProducts}>Clear all</button>
+                )}
+              </div>
+              {savedProducts.length === 0 ? (
+                <p className="home-empty">No saved products yet. Search and save products to track them here.</p>
+              ) : (
+                <div className="home-products-grid">
+                  {savedProducts.map(product => (
+                    <div className="home-product-card" key={getProductKey(product)}>
+                      <div className="home-product-retailer" style={{ color: RETAILER_COLORS[product.retailerName] || '#aaa' }}>
+                        {product.retailerName}
+                      </div>
+                      <h3 className="home-product-name">{product.productName}</h3>
+                      <div className="home-product-footer">
+                        <span className="home-product-price">{product.price}</span>
+                        <button
+                          className="home-product-remove"
+                          onClick={() => removeSavedProduct(product)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {/* Settings view */}
+        {activeView === 'settings' && (
+          <div className="content-section">
+            <Settings />
+          </div>
+        )}
+
+        {/* Alerts view */}
+        {activeView === 'alerts' && (
+          <div className="content-section">
+            <section className="settings-section">
+              <div className="section-heading">
+                <div>
+                  <h2>Price Alerts</h2>
+                  <p className="search-subtitle">Get notified when prices drop on products you're watching.</p>
+                </div>
+              </div>
+              <div className="no-results">No active alerts. Set an alert from any search result.</div>
+            </section>
+          </div>
+        )}
+
+        {/* Saved Products view */}
         {activeView === 'saved' && (
-          <section className="settings-section">
-            <div className="section-heading">
-              <div>
-                <h2>Saved Products</h2>
-                <p className="search-subtitle">Keep products you want to revisit without running the same search again.</p>
+          <div className="content-section">
+            <section className="settings-section">
+              <div className="section-heading">
+                <div>
+                  <h2>Saved Products</h2>
+                  <p className="search-subtitle">Keep products you want to revisit without running the same search again.</p>
+                </div>
+                {savedProducts.length > 0 && (
+                  <button className="clear-filters-btn" type="button" onClick={clearSavedProducts}>Clear saved</button>
+                )}
               </div>
-              {savedProducts.length > 0 && (
-                <button className="clear-filters-btn" type="button" onClick={clearSavedProducts}>Clear saved</button>
+              {savedProducts.length === 0 ? (
+                <div className="no-results">
+                  No saved products yet. Search for a product and click "Save" on anything you want to track.
+                </div>
+              ) : (
+                <div className="saved-products-list">
+                  {savedProducts.map(product => (
+                    <article className="saved-product-card" key={getProductKey(product)}>
+                      <div>
+                        <div className="saved-product-meta">
+                          <span className="retailer-tag" style={{ color: RETAILER_COLORS[product.retailerName] || '#aaa' }}>
+                            {product.retailerName}
+                          </span>
+                          <span>Saved from "{product.sourceQuery}"</span>
+                        </div>
+                        <h3>{product.productName}</h3>
+                        <p className="saved-date">Saved {new Date(product.savedAt).toLocaleDateString()}</p>
+                      </div>
+                      <div className="saved-product-side">
+                        <strong>{product.price}</strong>
+                        <div className="saved-product-actions">
+                          <a href={product.url} target="_blank" rel="noopener noreferrer" className="view-btn">View</a>
+                          <button className="btn-alert" type="button" onClick={() => setAlertQuery(product.productName)}>Set Alert</button>
+                          <button className="btn-remove" type="button" onClick={() => removeSavedProduct(product)}>Remove</button>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
               )}
-            </div>
-            {savedProducts.length === 0 ? (
-              <div className="no-results">
-                No saved products yet. Search for a product and click "Save" on anything you want to track.
-              </div>
-            ) : (
-              <div className="saved-products-list">
-                {savedProducts.map(product => (
-                  <article className="saved-product-card" key={getProductKey(product)}>
-                    <div>
-                      <div className="saved-product-meta">
-                        <span className="retailer-tag" style={{ color: RETAILER_COLORS[product.retailerName] || '#aaa' }}>
-                          {product.retailerName}
-                        </span>
-                        <span>Saved from "{product.sourceQuery}"</span>
-                      </div>
-                      <h3>{product.productName}</h3>
-                      <p className="saved-date">Saved {new Date(product.savedAt).toLocaleDateString()}</p>
-                    </div>
-                    <div className="saved-product-side">
-                      <strong>{product.price}</strong>
-                      <div className="saved-product-actions">
-                        <a href={product.url} target="_blank" rel="noopener noreferrer" className="view-btn">View</a>
-                        <button className="btn-alert" type="button" onClick={() => setAlertQuery(product.productName)}>Set Alert</button>
-                        <button className="btn-remove" type="button" onClick={() => removeSavedProduct(product)}>Remove</button>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+            </section>
+          </div>
         )}
 
+        {/* History view */}
         {activeView === 'history' && (
-          <section className="settings-section">
-            <div className="section-heading">
-              <div>
-                <h2>Search History</h2>
-                <p className="search-subtitle">Run a previous comparison again with one click.</p>
+          <div className="content-section">
+            <section className="settings-section">
+              <div className="section-heading">
+                <div>
+                  <h2>Search History</h2>
+                  <p className="search-subtitle">Run a previous comparison again with one click.</p>
+                </div>
+                {recentSearches.length > 0 && (
+                  <button className="clear-filters-btn" type="button" onClick={clearHistory}>Clear history</button>
+                )}
               </div>
-              {recentSearches.length > 0 && (
-                <button className="clear-filters-btn" type="button" onClick={clearHistory}>Clear history</button>
+              {recentSearches.length === 0 ? (
+                <div className="no-results">No recent searches yet.</div>
+              ) : (
+                <div className="history-list">
+                  {recentSearches.map(item => (
+                    <button key={item} type="button" onClick={() => handleSearch(item)}>
+                      <span>{item}</span>
+                      <strong>Search again</strong>
+                    </button>
+                  ))}
+                </div>
               )}
-            </div>
-            {recentSearches.length === 0 ? (
-              <div className="no-results">No recent searches yet.</div>
-            ) : (
-              <div className="history-list">
-                {recentSearches.map(item => (
-                  <button key={item} type="button" onClick={() => handleSearch(item)}>
-                    <span>{item}</span>
-                    <strong>Search again</strong>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
+            </section>
+          </div>
         )}
 
+        {/* Search / results view */}
         {activeView === 'search' && (
-          <>
-            <div className="search-section">
-              <h2>Find the Best Price</h2>
-              <p className="search-subtitle">We search Amazon, Walmart, Newegg and more in real time</p>
-              <div className="search-row">
-                <input
-                  className="search-input"
-                  type="text"
-                  placeholder="Search for a product e.g. MacBook Pro, RTX 4090..."
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                />
-                <button className="search-btn" onClick={() => handleSearch()} disabled={loading}>
-                  {loading ? 'Searching...' : 'Search'}
-                </button>
-              </div>
-            </div>
-
+          <div className="content-section">
             {loading && (
               <div className="loading-state">
                 <div className="spinner" />
-                <p>Searching across retailers...</p>
+                <div className="loading-steps">
+                  {LOADING_STEPS.map((step, i) => (
+                    <div
+                      key={step}
+                      className={`loading-step ${i === loadingStep ? 'active' : i < loadingStep ? 'done' : ''}`}
+                    >
+                      <span className="step-dot" />
+                      {step}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {error && <div className="error-banner">{error}</div>}
+
+            {!loading && !response && !error && (
+              <div className="search-prompt">
+                <div className="search-prompt-icon">🔍</div>
+                <h2>Search for a product</h2>
+                <p>Use the search bar above to compare prices across Amazon, Walmart, Newegg and more.</p>
+              </div>
+            )}
 
             {response && !loading && (
               <div className="results-section">
@@ -342,6 +585,18 @@ const Dashboard = () => {
                     ))}
                   </div>
                 </div>
+
+                {(response.results || []).length > 0 && (
+                  <div className="recommendation-banner">
+                    <span className="recommendation-label">🤖 PricePilot Recommendation</span>
+                    <p>{getSmartRecommendation(response.results)}</p>
+                    {bestDeal && (
+                      <a href={bestDeal.url} target="_blank" rel="noopener noreferrer" className="recommendation-cta">
+                        View Best Deal → {bestDeal.price} on {bestDeal.retailerName}
+                      </a>
+                    )}
+                  </div>
+                )}
 
                 {(response.results || []).length > 0 && (
                   <div className="analytics-panel">
@@ -443,7 +698,7 @@ const Dashboard = () => {
                 )}
               </div>
             )}
-          </>
+          </div>
         )}
       </main>
 
