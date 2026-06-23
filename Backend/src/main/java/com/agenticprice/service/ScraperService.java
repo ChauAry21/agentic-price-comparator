@@ -108,10 +108,11 @@ public class ScraperService {
     }
 
     public List<PriceResult> getRanking(List<PriceResult> products, String query) {
-        String raw_ranking = openAIService.rankProducts(products, query);
+        String rawRanking = openAIService.rankProducts(products, query);
         List<Integer> indices = new ArrayList<>();
         try {
-            JsonNode root = objectMapper.readTree(raw_ranking);
+            String cleaned = stripMarkdownFences(rawRanking);
+            JsonNode root = objectMapper.readTree(cleaned);
             JsonNode indicesNode = root.get("ordered_indices");
             if (indicesNode != null && indicesNode.isArray()) {
                 for (JsonNode node : indicesNode) {
@@ -131,5 +132,22 @@ public class ScraperService {
             }
         }
         return ranked.size() == products.size() ? ranked : products;
+    }
+
+    /**
+     * Strips markdown code fences from a string if present. The LLM
+     * sometimes wraps JSON in ```json ... ``` even when the prompt asks
+     * for raw JSON, and the parser fails on the leading backtick.
+     */
+    private String stripMarkdownFences(String raw) {
+        if (raw == null) return "";
+        String cleaned = raw.trim();
+        if (cleaned.startsWith("```")) {
+            int firstNewline = cleaned.indexOf('\n');
+            if (firstNewline > 0) cleaned = cleaned.substring(firstNewline + 1);
+            if (cleaned.endsWith("```")) cleaned = cleaned.substring(0, cleaned.length() - 3);
+            cleaned = cleaned.trim();
+        }
+        return cleaned;
     }
 }

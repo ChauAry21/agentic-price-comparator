@@ -70,4 +70,21 @@ public class OpenAIService {
                         .build());
         return response.choices().get(0).message().content().orElse("");
     }
+
+    /**
+     * Sends the list of selected product listings to the LLM with the
+     * EXTRACT_FEATURES prompt and returns the raw response text. The caller
+     * is responsible for parsing the JSON and validating the shape; keeping
+     * the LLM client free of business logic makes it cheap to swap the model
+     * or call site in tests.
+     */
+    public String extractFeatures(List<PriceResult> products) {
+        String input = "Products: " + products.toString();
+        ChatCompletion response = client.chat().completions().create(
+                ChatCompletionCreateParams.builder()
+                        .model(ChatModel.GPT_4O_MINI)
+                        .addUserMessage(PriceHawkPrompt.EXTRACT_FEATURES.with(input))
+                        .build());
+        return response.choices().get(0).message().content().orElse("");
+    }
 }

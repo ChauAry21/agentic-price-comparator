@@ -1,0 +1,13 @@
+# Normalize line endings for text files to LF. The IDE silently flips CRLF<->LF
+# on files it edits, which can blow up diffs when .gitattributes is absent.
+*               text=auto eol=lf
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary
+*.jar           binary
+*.ttf           binary
+*.woff          binary
+*.woff2         binary
+*.pdf           binary
