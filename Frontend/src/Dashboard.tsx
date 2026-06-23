@@ -1,19 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoIcon from './assets/logo.jpg';
 import { searchPrices, type PriceComparisonResponse, type PriceResult } from './api/priceApi';
 import { extractFeatures, type FeatureExtractionResponse } from './api/featureApi';
-import {
-  getPriceHistory,
-  getTrackedQueries,
-  type PriceHistoryPoint,
-  type TrackedQuery,
-} from './api/trackingApi';
 import AlertModal from './components/AlertModal';
 import CompareTray from './components/CompareTray';
 import FeatureTable from './components/FeatureTable';
-import PriceHistoryChart from './components/PriceHistoryChart';
-import TrackPriceModal from './components/TrackPriceModal';
 import Settings from './components/Settings';
 import './dashboard.css';
 
@@ -27,7 +19,7 @@ const RETAILER_COLORS: Record<string, string> = {
 const MAX_COMPARE = 6;
 
 type SortOption = 'ranking' | 'price-asc' | 'price-desc' | 'savings-desc';
-type DashboardView = 'search' | 'saved' | 'tracked' | 'history' | 'settings';
+type DashboardView = 'search' | 'saved' | 'history' | 'settings';
 
 const SETTINGS_KEY = 'pricepilot-dashboard-settings';
 const RECENT_SEARCHES_KEY = 'pricepilot-recent-searches';
@@ -114,7 +106,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<DashboardView>('search');
   const [query, setQuery] = useState('');
-  const [trackQuery, setTrackQuery] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [response, setResponse] = useState<PriceComparisonResponse | null>(null);
@@ -127,66 +118,6 @@ const Dashboard = () => {
   const [featureResponse, setFeatureResponse] = useState<FeatureExtractionResponse | null>(null);
   const [featureLoading, setFeatureLoading] = useState(false);
   const [featureError, setFeatureError] = useState('');
-  const [trackedQueries, setTrackedQueries] = useState<TrackedQuery[]>([]);
-  const [selectedTrackedId, setSelectedTrackedId] = useState<string | null>(null);
-  const [historyPoints, setHistoryPoints] = useState<PriceHistoryPoint[]>([]);
-  const [trackedLoading, setTrackedLoading] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [trackedError, setTrackedError] = useState('');
-
-  const selectedTracked = trackedQueries.find(q => q.id === selectedTrackedId) ?? null;
-
-  useEffect(() => {
-    if (activeView !== 'tracked') return;
-
-    let cancelled = false;
-    setTrackedLoading(true);
-    setTrackedError('');
-
-    getTrackedQueries()
-        .then(queries => {
-          if (cancelled) return;
-          setTrackedQueries(queries);
-          setSelectedTrackedId(current => {
-            if (current && queries.some(q => q.id === current)) return current;
-            return queries[0]?.id ?? null;
-          });
-        })
-        .catch(() => {
-          if (cancelled) return;
-          setTrackedQueries([]);
-          setSelectedTrackedId(null);
-          setTrackedError('Unable to load tracked products. Make sure you are logged in.');
-        })
-        .finally(() => {
-          if (!cancelled) setTrackedLoading(false);
-        });
-
-    return () => { cancelled = true; };
-  }, [activeView]);
-
-  useEffect(() => {
-    if (!selectedTrackedId) {
-      setHistoryPoints([]);
-      return;
-    }
-
-    let cancelled = false;
-    setHistoryLoading(true);
-
-    getPriceHistory(selectedTrackedId)
-        .then(history => {
-          if (!cancelled) setHistoryPoints(history.points);
-        })
-        .catch(() => {
-          if (!cancelled) setHistoryPoints([]);
-        })
-        .finally(() => {
-          if (!cancelled) setHistoryLoading(false);
-        });
-
-    return () => { cancelled = true; };
-  }, [selectedTrackedId]);
 
   const retailersWithResults = response ? getRetailersWithResults(response) : [];
 
@@ -341,9 +272,6 @@ const Dashboard = () => {
             <button className={activeView === 'saved' ? 'active' : ''} onClick={() => setActiveView('saved')}>
               Saved Products {savedProducts.length > 0 ? `(${savedProducts.length})` : ''}
             </button>
-            <button className={activeView === 'tracked' ? 'active' : ''} onClick={() => setActiveView('tracked')}>
-              Tracked {trackedQueries.length > 0 ? `(${trackedQueries.length})` : ''}
-            </button>
             <button className={activeView === 'history' ? 'active' : ''} onClick={() => setActiveView('history')}>History</button>
             <button className={activeView === 'settings' ? 'active' : ''} onClick={() => setActiveView('settings')}>Settings</button>
           </nav>
@@ -397,65 +325,6 @@ const Dashboard = () => {
                           </article>
                       ))}
                     </div>
-                )}
-              </section>
-          )}
-
-          {activeView === 'tracked' && (
-              <section className="settings-section">
-                <div className="section-heading">
-                  <div>
-                    <h2>Tracked Products</h2>
-                    <p className="search-subtitle">Price history for products you are monitoring over time.</p>
-                  </div>
-                </div>
-                {trackedLoading && (
-                    <div className="loading-state">
-                      <div className="spinner" />
-                      <p>Loading tracked products...</p>
-                    </div>
-                )}
-                {trackedError && <div className="error-banner">{trackedError}</div>}
-                {!trackedLoading && !trackedError && trackedQueries.length === 0 && (
-                    <div className="no-results">
-                      No tracked products yet. Search for a product and click "Track Price" to start monitoring.
-                    </div>
-                )}
-                {!trackedLoading && trackedQueries.length > 0 && (
-                    <>
-                      <div className="history-list">
-                        {trackedQueries.map(q => (
-                            <button
-                                key={q.id}
-                                type="button"
-                                className={selectedTrackedId === q.id ? 'active' : ''}
-                                onClick={() => setSelectedTrackedId(q.id)}
-                            >
-                              <span>{q.canonicalProductName}</span>
-                              <strong>
-                                {q.lastScrapedAt
-                                    ? `Last scraped ${new Date(q.lastScrapedAt).toLocaleDateString()}`
-                                    : 'Awaiting first scrape'}
-                              </strong>
-                            </button>
-                        ))}
-                      </div>
-                      {selectedTracked && (
-                          <div style={{ marginTop: '24px' }}>
-                            <h3 style={{ fontSize: '16px', marginBottom: '16px', color: '#ccc' }}>
-                              {selectedTracked.canonicalProductName}
-                            </h3>
-                            {historyLoading ? (
-                                <div className="loading-state">
-                                  <div className="spinner" />
-                                  <p>Loading price history...</p>
-                                </div>
-                            ) : (
-                                <PriceHistoryChart points={historyPoints} />
-                            )}
-                          </div>
-                      )}
-                    </>
                 )}
               </section>
           )}
@@ -622,7 +491,6 @@ const Dashboard = () => {
                                               {isProductSaved(result) ? 'Saved' : 'Save'}
                                             </button>
                                             <button className="btn-alert" type="button" onClick={() => setAlertQuery(result.productName)}>Set Alert</button>
-                                            <button className="btn-alert" type="button" onClick={() => setTrackQuery(result.productName)}>Track Price</button>
                                             <button
                                                 className={`btn-compare ${isSelected ? 'selected' : ''}`}
                                                 type="button"
@@ -650,10 +518,6 @@ const Dashboard = () => {
             <AlertModal productQuery={alertQuery} onClose={() => setAlertQuery(null)} />
         )}
 
-        {trackQuery && (
-            <TrackPriceModal query={trackQuery} onClose={() => setTrackQuery(null)} />
-        )}
-
         {selectedProducts.length > 0 && (
             <CompareTray
                 selected={selectedProducts}
@@ -670,6 +534,10 @@ const Dashboard = () => {
                 response={featureResponse}
                 onClose={() => setFeatureResponse(null)}
             />
+        )}
+
+        {featureError && (
+            <div className="error-banner feature-error">{featureError}</div>
         )}
       </div>
   );
