@@ -19,6 +19,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.agenticprice.util.ProductKeyUtil;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -58,7 +60,7 @@ public class PriceComparisonAgent {
                 .filter(r -> r.getUrl() != null && !r.getUrl().isBlank())
                 .collect(Collectors.collectingAndThen(
                         Collectors.toMap(
-                                r -> extractProductKey(r.getUrl()),
+                                r -> ProductKeyUtil.extractProductKey(r.getUrl()),
                                 r -> r,
                                 (a, b) -> a,
                                 LinkedHashMap::new),
