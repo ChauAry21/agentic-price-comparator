@@ -1,60 +1,70 @@
 package com.agenticprice.service;
 
-import lombok.RequiredArgsConstructor;
+import com.sendgrid.Method;
+import com.sendgrid.Request;
+import com.sendgrid.Response;
+import com.sendgrid.SendGrid;
+import com.sendgrid.helpers.mail.Mail;
+import com.sendgrid.helpers.mail.objects.Content;
+import com.sendgrid.helpers.mail.objects.Email;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class NotificationService {
 
-    private final JavaMailSender mailSender;
+    @Value("${SENDGRID_API_KEY}")
+    private String sendGridApiKey;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
+    private static final String FROM_EMAIL = "PriceHawkNotifications@gmail.com";
+    private static final String FROM_NAME = "PriceHawk AI";
 
     public void sendPriceAlert(String toEmail, String productQuery, String price, String url, String threshold) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(toEmail);
-            message.setSubject("PriceHawk Alert: " + productQuery + " is now " + price);
-            message.setText(
-                    "Good news! A price alert you set on PriceHawk has been triggered.\n\n" +
-                            "Product: " + productQuery + "\n" +
-                            "Current Price: " + price + "\n" +
-                            "Your Threshold: $" + threshold + "\n" +
-                            "Link: " + url + "\n\n" +
-                            "This alert has been deactivated. Visit PriceHawk to set a new one."
-            );
-            mailSender.send(message);
-            log.info("Price alert email sent to {}", toEmail);
-        } catch (Exception e) {
-            log.error("Failed to send alert email to {}: {}", toEmail, e.getMessage());
-        }
+        String subject = "PriceHawk Alert: " + productQuery + " is now " + price;
+        String body =
+                "Good news! A price alert you set on PriceHawk has been triggered.\n\n" +
+                        "Product: " + productQuery + "\n" +
+                        "Current Price: " + price + "\n" +
+                        "Your Threshold: $" + threshold + "\n" +
+                        "Link: " + url + "\n\n" +
+                        "This alert has been deactivated. Visit PriceHawk to set a new one.";
+        sendEmail(toEmail, subject, body);
     }
 
     @Async
     public void sendOtpEmail(String toEmail, String code) {
+        String subject = "Your PriceHawk login code";
+        String body =
+                "Your PriceHawk login code is: " + code + "\n\n" +
+                        "This code expires in 10 minutes.\n\n" +
+                        "If you didn't request this, ignore this email.";
+        sendEmail(toEmail, subject, body);
+    }
+
+    private void sendEmail(String toEmail, String subject, String body) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(toEmail);
-            message.setSubject("Your PriceHawk login code");
-            message.setText(
-                    "Your PriceHawk login code is: " + code + "\n\n" +
-                            "This code expires in 10 minutes.\n\n" +
-                            "If you didn't request this, ignore this email."
-            );
-            mailSender.send(message);
-            log.info("OTP email sent to {}", toEmail);
+            Email from = new Email(FROM_EMAIL, FROM_NAME);
+            Email to = new Email(toEmail);
+            Content content = new Content("text/plain", body);
+            Mail mail = new Mail(from, subject, to, content);
+
+            SendGrid sg = new SendGrid(sendGridApiKey);
+            Request request = new Request();
+            request.setMethod(Method.POST);
+            request.setEndpoint("mail/send");
+            request.setBody(mail.build());
+
+            Response response = sg.api(request);
+            if (response.getStatusCode() >= 400) {
+                log.error("SendGrid error {}: {}", response.getStatusCode(), response.getBody());
+            } else {
+                log.info("Email sent to {} via SendGrid (status {})", toEmail, response.getStatusCode());
+            }
         } catch (Exception e) {
-            log.error("Failed to send OTP email to {}: {}", toEmail, e.getMessage());
+            log.error("Failed to send email to {}: {}", toEmail, e.getMessage());
         }
     }
 }
