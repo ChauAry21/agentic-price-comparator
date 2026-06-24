@@ -15,7 +15,7 @@ public class NotificationService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${MAIL_USERNAME}")
+    @Value("${spring.mail.username}")
     private String fromEmail;
 
     public void sendPriceAlert(String toEmail, String productQuery, String price, String url, String threshold) {
