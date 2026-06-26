@@ -1,0 +1,42 @@
+spring.datasource.url=${DATABASE_URL}
+spring.datasource.username=${DATABASE_USERNAME}
+spring.datasource.password=${DATABASE_PASSWORD}
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+
+# Mail
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=${MAIL_USERNAME}
+spring.mail.password=${MAIL_PASSWORD}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# OpenAI
+openai.api.key=${OPENAI_API_KEY}
+
+# Frontend URL
+FRONTEND_URL=${FRONTEND_URL:http://localhost:5173}
+
+# OAuth2 - Google
+spring.security.oauth2.client.registration.google.client-id=${GOOGLE_CLIENT_ID}
+spring.security.oauth2.client.registration.google.client-secret=${GOOGLE_CLIENT_SECRET}
+spring.security.oauth2.client.registration.google.scope=email,profile
+
+# OAuth2 - GitHub
+spring.security.oauth2.client.registration.github.client-id=${GITHUB_CLIENT_ID}
+spring.security.oauth2.client.registration.github.client-secret=${GITHUB_CLIENT_SECRET}
+spring.security.oauth2.client.registration.github.scope=read:user,user:email
+
+# OAuth2 - LinkedIn
+spring.security.oauth2.client.registration.linkedin.client-id=${LINKEDIN_CLIENT_ID}
+spring.security.oauth2.client.registration.linkedin.client-secret=${LINKEDIN_CLIENT_SECRET}
+spring.security.oauth2.client.registration.linkedin.scope=openid,profile,email
+spring.security.oauth2.client.registration.linkedin.authorization-grant-type=authorization_code
+spring.security.oauth2.client.registration.linkedin.redirect-uri={baseUrl}/login/oauth2/code/linkedin
+spring.security.oauth2.client.registration.linkedin.client-name=LinkedIn
+
+spring.security.oauth2.client.provider.linkedin.authorization-uri=https://www.linkedin.com/oauth/v2/authorization
+spring.security.oauth2.client.provider.linkedin.token-uri=https://www.linkedin.com/oauth/v2/accessToken
+spring.security.oauth2.client.provider.linkedin.user-info-uri=https://api.linkedin.com/v2/userinfo
+spring.security.oauth2.client.provider.linkedin.user-name-attribute=sub

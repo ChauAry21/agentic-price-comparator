@@ -1,0 +1,211 @@
+.about-page {
+  background-color: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  padding: 0;
+  margin: 0;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* Header & Nav styling matching your splash page structure */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+}
+
+.logo img {
+  height: 40px; /* Adjust according to your asset file size */
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+
+.nav-btn:hover, .nav-btn.active {
+  color: var(--text-h);
+}
+
+.nav-btn.get-started {
+  background-color: var(--text-h);
+  color: var(--bg);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* Page Layout Container */
+.about-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* Welcome Segment centering */
+.welcome-section {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto 60px auto;
+}
+
+.welcome-section h2 {
+  font-size: 2.2rem;
+  margin-bottom: 20px;
+}
+
+.welcome-section p {
+  color: var(--text);
+  line-height: 1.6;
+  font-style: italic;
+}
+
+/* Dual Column Layout */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: start;
+  margin-top: 40px;
+}
+
+.grid-col h3 {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+}
+
+.grid-col p {
+  color: #dcdcdc;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+/* Right column push matching the image layout placement offset */
+.right-col {
+  margin-top: 60px;
+}
+
+/* Meet the Team Section */
+.team-section {
+  margin: 60px 0;
+  text-align: center;
+}
+
+.team-section h2 {
+  font-size: 2rem;
+  margin-bottom: 40px;
+}
+
+.team-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+}
+
+.team-card {
+  background-color: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 24px;
+  width: 280px;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.team-card:hover {
+  border-color: var(--accent);
+}
+
+.team-card h4 {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+  color: var(--text-h);
+}
+
+.team-role {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  font-style: italic;
+}
+
+.team-card p:last-child {
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Meet Team Button Styling */
+.meet-team-btn {
+  background-color: #aa3bff;
+  color: #ffffff;
+  border: none;
+  padding: 14px 36px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 10px;
+  margin-top: 28px;
+  transition: background-color 0.2s, transform 0.2s;
+  display: inline-block;
+}
+
+.meet-team-btn:hover {
+  background-color: #9b2ef0;
+  transform: translateY(-2px);
+}
+
+.team-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #aa3bff, #7b2cbf);
+  color: #ffffff;
+  font-size: 1.4rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.back-btn {
+  background: transparent;
+  border: 1px solid #333;
+  color: #aaaaaa;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 32px;
+  transition: color 0.2s, border-color 0.2s;
+  display: inline-block;
+}
+
+.back-btn:hover {
+  color: #ffffff;
+  border-color: #666;
+}
+
+/* Responsive breakpoint for smaller desktop/tablet views */
+@media (max-width: 768px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .right-col {
+    margin-top: 0;
+  }
+}
