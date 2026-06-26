@@ -1,4 +1,4 @@
-package com.agenticprice.service;
+package com.agenticprice.scraper;
 
 import com.agenticprice.service.OpenAIService;
 import com.agenticprice.service.PlaywrightService;
