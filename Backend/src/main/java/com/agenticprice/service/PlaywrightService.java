@@ -37,28 +37,26 @@ public class PlaywrightService {
         return Playwright.create();
     });
 
-    private final ThreadLocal<Browser> browserThreadLocal = ThreadLocal.withInitial(() ->
-            playwrightThreadLocal.get().chromium().launch(
-                    new BrowserType.LaunchOptions()
-                            .setExecutablePath(Path.of(CHROMIUM_PATH))
-                            .setHeadless(true)
-                            .setArgs(java.util.List.of("--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"))
-            )
-    );
-
     public String fetchRenderedHtml(String url) {
         if (CHROMIUM_PATH == null) {
             log.warn("Playwright unavailable, skipping: {}", url);
             return "";
         }
         try {
-            Browser browser = browserThreadLocal.get();
-            try (BrowserContext context = browser.newContext(new Browser.NewContextOptions()
-                    .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"))) {
-                Page page = context.newPage();
-                page.navigate(url, new Page.NavigateOptions().setTimeout(15000));
-                page.waitForTimeout(3000);
-                return page.content();
+            Playwright playwright = playwrightThreadLocal.get();
+            try (Browser browser = playwright.chromium().launch(
+                    new BrowserType.LaunchOptions()
+                            .setExecutablePath(Path.of(CHROMIUM_PATH))
+                            .setHeadless(true)
+                            .setArgs(java.util.List.of("--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"))
+            )) {
+                try (BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                        .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"))) {
+                    Page page = context.newPage();
+                    page.navigate(url, new Page.NavigateOptions().setTimeout(15000));
+                    page.waitForTimeout(3000);
+                    return page.content();
+                }
             }
         } catch (Exception e) {
             log.error("Playwright failed to fetch {}: {}", url, e.getMessage());
@@ -69,7 +67,6 @@ public class PlaywrightService {
     @PreDestroy
     public void close() {
         try {
-            browserThreadLocal.get().close();
             playwrightThreadLocal.get().close();
         } catch (Exception e) {
             log.warn("Error closing Playwright: {}", e.getMessage());
