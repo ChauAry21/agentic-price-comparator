@@ -1,7 +1,6 @@
 package com.agenticprice.service;
 
 import com.microsoft.playwright.*;
-import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -32,18 +31,12 @@ public class PlaywrightService {
         return null;
     }
 
-    private final ThreadLocal<Playwright> playwrightThreadLocal = ThreadLocal.withInitial(() -> {
-        if (CHROMIUM_PATH == null) throw new IllegalStateException("No Chromium binary available");
-        return Playwright.create();
-    });
-
     public String fetchRenderedHtml(String url) {
         if (CHROMIUM_PATH == null) {
             log.warn("Playwright unavailable, skipping: {}", url);
             return "";
         }
-        try {
-            Playwright playwright = playwrightThreadLocal.get();
+        try (Playwright playwright = Playwright.create()) {
             try (Browser browser = playwright.chromium().launch(
                     new BrowserType.LaunchOptions()
                             .setExecutablePath(Path.of(CHROMIUM_PATH))
@@ -61,15 +54,6 @@ public class PlaywrightService {
         } catch (Exception e) {
             log.error("Playwright failed to fetch {}: {}", url, e.getMessage());
             return "";
-        }
-    }
-
-    @PreDestroy
-    public void close() {
-        try {
-            playwrightThreadLocal.get().close();
-        } catch (Exception e) {
-            log.warn("Error closing Playwright: {}", e.getMessage());
         }
     }
 }
