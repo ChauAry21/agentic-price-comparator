@@ -6,6 +6,7 @@ export interface PriceResult {
     price: string;
     currency: string;
     url: string;
+    financed?: boolean;
 }
 
 export interface PriceComparisonResponse {
