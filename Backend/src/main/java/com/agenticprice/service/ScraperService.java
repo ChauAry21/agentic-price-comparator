@@ -49,10 +49,12 @@ public class ScraperService {
                 }))
                 .toList();
 
-        return futures.stream()
+        List<PriceResult> results = futures.stream()
                 .map(CompletableFuture::join)
                 .flatMap(List::stream)
                 .toList();
+
+        return results;
     }
 
     public void scrapeAndSave(String rawQuery) {
@@ -77,10 +79,11 @@ public class ScraperService {
                     PriceSnapshot snapshot = new PriceSnapshot();
                     snapshot.setProduct(product);
                     snapshot.setRetailer(retailer);
-                    snapshot.setPrice(parsePrice(result.getPrice()));
+                    snapshot.setPrice(toBigDecimal(result.getPrice()));
                     snapshot.setCurrency(result.getCurrency());
                     snapshot.setUrl(result.getUrl());
                     snapshot.setScrapedAt(OffsetDateTime.now());
+                    snapshot.setFinanced(result.isFinanced());
                     priceSnapshotRepository.save(snapshot);
                 } catch (Exception e) {
                     log.warn("Failed to save snapshot for {}: {}", result.getProductName(), e.getMessage());
@@ -98,11 +101,24 @@ public class ScraperService {
         });
     }
 
-    private BigDecimal parsePrice(String priceStr) {
+    /**
+     * Converts a {@link PriceResult#getPrice()} string to a BigDecimal.
+     * The field is populated by the LLM extractor (or scraped directly) as
+     * a canonical numeric string, so no regex stripping is needed. Returns
+     * BigDecimal.ZERO on malformed input so the save can't fail.
+     */
+    private static BigDecimal toBigDecimal(String priceStr) {
+        if (priceStr == null || priceStr.isBlank()) return BigDecimal.ZERO;
+        // Defensive: scrapers that build prices from raw HTML may emit
+        // currency-prefixed strings (e.g. "$19.79"). Strip everything
+        // that isn't a digit or decimal point before parsing so a stray
+        // "$" doesn't silently zero a listing.
+        String cleaned = priceStr.replaceAll("[^0-9.]", "");
+        if (cleaned.isEmpty()) return BigDecimal.ZERO;
         try {
-            String cleaned = priceStr.replaceAll("[^0-9.]", "");
             return new BigDecimal(cleaned);
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
+            log.warn("Unable to parse price value: {}", priceStr);
             return BigDecimal.ZERO;
         }
     }

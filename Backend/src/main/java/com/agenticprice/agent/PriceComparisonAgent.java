@@ -105,16 +105,38 @@ public class PriceComparisonAgent {
         return response;
     }
 
+    /**
+     * Converts {@link PriceResult#getPrice()} to a BigDecimal. Since the field
+     * is now always a canonical numeric string written by the LLM extractor
+     * (or scraped directly from HTML), this is a thin wrapper that handles
+     * the null/blank cases only.
+     */
+    private BigDecimal toBigDecimal(PriceResult r) {
+        String s = r.getPrice();
+        if (s == null || s.isBlank()) return BigDecimal.ZERO;
+        // Defensive: HTML-only scrapers (e.g. Newegg) may have written
+        // a currency-prefixed string. Strip non-numeric chars before
+        // parsing so the value isn't silently dropped to zero.
+        String cleaned = s.replaceAll("[^0-9.]", "");
+        if (cleaned.isEmpty()) return BigDecimal.ZERO;
+        try {
+            return new BigDecimal(cleaned);
+        } catch (NumberFormatException e) {
+            log.warn("Unable to parse stored price value: {}", s);
+            return BigDecimal.ZERO;
+        }
+    }
+
     private PriceResult getBestDeal(List<PriceResult> results) {
         return results.stream()
-                .filter(result -> parsePrice(result.getPrice()).compareTo(BigDecimal.ZERO) > 0)
-                .min(Comparator.comparing(result -> parsePrice(result.getPrice())))
+                .filter(result -> toBigDecimal(result).compareTo(BigDecimal.ZERO) > 0)
+                .min(Comparator.comparing(result -> toBigDecimal(result)))
                 .orElse(null);
     }
 
     private BigDecimal getLowestPrice(List<PriceResult> results) {
         return results.stream()
-                .map(result -> parsePrice(result.getPrice()))
+                .map(result -> toBigDecimal(result))
                 .filter(price -> price.compareTo(BigDecimal.ZERO) > 0)
                 .min(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);
@@ -122,7 +144,7 @@ public class PriceComparisonAgent {
 
     private BigDecimal getHighestPrice(List<PriceResult> results) {
         return results.stream()
-                .map(result -> parsePrice(result.getPrice()))
+                .map(result -> toBigDecimal(result))
                 .filter(price -> price.compareTo(BigDecimal.ZERO) > 0)
                 .max(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);
@@ -130,7 +152,7 @@ public class PriceComparisonAgent {
 
     private BigDecimal getAveragePrice(List<PriceResult> results) {
         List<BigDecimal> prices = results.stream()
-                .map(result -> parsePrice(result.getPrice()))
+                .map(result -> toBigDecimal(result))
                 .filter(price -> price.compareTo(BigDecimal.ZERO) > 0)
                 .toList();
         if (prices.isEmpty())
@@ -139,19 +161,7 @@ public class PriceComparisonAgent {
         return total.divide(BigDecimal.valueOf(prices.size()), 2, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal parsePrice(String price) {
-        if (price == null || price.isBlank())
-            return BigDecimal.ZERO;
-        try {
-            String cleaned = price.replaceAll("[^0-9.]", "");
-            if (cleaned.isBlank())
-                return BigDecimal.ZERO;
-            return new BigDecimal(cleaned);
-        } catch (NumberFormatException e) {
-            log.warn("Unable to parse price value: {}", price);
-            return BigDecimal.ZERO;
-        }
-    }
+
 
     private String extractProductKey(String url) {
         if (url == null)

@@ -70,7 +70,7 @@ public class FeatureExtractionService {
             if (retailer == null || retailer.isBlank())
                 continue;
             String key = "p" + i;
-            columns.add(new Column(key, retailer, p.getProductName()));
+            columns.add(new Column(key, retailer, p.getProductName(), p.isFinanced()));
             priceRow.put(key, formatPrice(p));
             conditionRow.put(key, detectCondition(p.getProductName()));
         }

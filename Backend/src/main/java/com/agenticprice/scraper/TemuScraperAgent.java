@@ -38,15 +38,15 @@ public class TemuScraperAgent implements ScraperAgent {
 
             List<CompletableFuture<PriceResult>> futures = items.stream()
                     .limit(5)
-                    .map(item -> CompletableFuture.supplyAsync(() -> {
+                    .map(item -> CompletableFuture.<PriceResult>supplyAsync(() -> {
                         try {
                             String itemHtml = item.outerHtml();
-                            String price = openAIService.extractPrice(itemHtml);
+                            com.agenticprice.util.PriceExtraction ext = com.agenticprice.util.PriceExtractionParser.parse(openAIService.extractPrice(itemHtml));
                             String productUrl = openAIService.extractProductUrl(itemHtml);
                             String title = item.select("h2 span").text();
-                            if (price.equals("PRICE_NOT_FOUND") || title.isBlank()) return null;
+                            if ((ext == null || ext.price() == null) || title.isBlank()) return null;
                             String fullUrl = productUrl.startsWith("/") ? "https://www.temu.com" + productUrl : productUrl;
-                            return new PriceResult("Temu", title, price, "USD", fullUrl);
+                            return new PriceResult("Temu", title, ext.price().toPlainString(), "USD", fullUrl, ext != null && ext.financed());
                         } catch (Exception e) {
                             log.warn("Failed to process Temu item: {}", e.getMessage());
                             return null;
