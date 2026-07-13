@@ -42,6 +42,10 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.jsoup</groupId>
       <artifactId>jsoup</artifactId>
       <version>1.17.2</version>
@@ -81,6 +85,9 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
+          <!-- Two @SpringBootApplication classes exist (App + ApplyMigrations);
+               pin the default to App so spring-boot:run knows which one to start. -->
+          <mainClass>com.agenticprice.App</mainClass>
           <excludes>
             <exclude>
               <groupId>org.projectlombok</groupId>
@@ -89,6 +96,11 @@
           </excludes>
         </configuration>
       </plugin>
+    <plugin>
+      <groupId>org.codehaus.mojo</groupId>
+      <artifactId>exec-maven-plugin</artifactId>
+      <version>3.1.1</version>
+    </plugin>
     </plugins>
   </build>
 </project>
