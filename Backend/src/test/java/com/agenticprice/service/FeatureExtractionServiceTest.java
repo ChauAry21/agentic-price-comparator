@@ -41,9 +41,9 @@ class FeatureExtractionServiceTest {
 
     private static List<Column> expectedColumns() {
         return List.of(
-                new Column("p0", "Amazon", "Sony WH-1000XM5 Wireless Noise Cancelling Headphones (Black)"),
-                new Column("p1", "Walmart", "Sony WH1000XM5 Over-Ear Headphones - Black"),
-                new Column("p2", "Newegg", "Sony WH-1000XM5 Wireless Headphones")
+                new Column("p0", "Amazon", "Sony WH-1000XM5 Wireless Noise Cancelling Headphones (Black)", false),
+                new Column("p1", "Walmart", "Sony WH1000XM5 Over-Ear Headphones - Black", false),
+                new Column("p2", "Newegg", "Sony WH-1000XM5 Wireless Headphones", false)
         );
     }
 
