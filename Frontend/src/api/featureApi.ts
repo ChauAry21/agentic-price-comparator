@@ -7,6 +7,7 @@ export interface Column {
     key: string;
     retailerName: string;
     productName: string;
+    financed?: boolean;
 }
 
 export interface FeatureRow {

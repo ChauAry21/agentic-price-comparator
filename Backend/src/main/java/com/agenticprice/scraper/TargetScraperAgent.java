@@ -42,13 +42,13 @@ public class TargetScraperAgent implements ScraperAgent {
                     .map(item -> CompletableFuture.supplyAsync(() -> {
                         try {
                             String itemHtml = item.outerHtml();
-                            String price = openAIService.extractPrice(itemHtml);
+                            com.agenticprice.util.PriceExtraction ext = com.agenticprice.util.PriceExtractionParser.parse(openAIService.extractPrice(itemHtml));
                             String productUrl = openAIService.extractProductUrl(itemHtml);
                             String title = item.select("a[href*='/p/']").attr("aria-label");
                             if (title.isBlank()) title = item.select("h2").text();
-                            if (price.equals("PRICE_NOT_FOUND") || title.isBlank()) return null;
+                            if ((ext == null || ext.price() == null) || title.isBlank()) return null;
                             String fullUrl = productUrl.startsWith("/") ? "https://www.target.com" + productUrl : productUrl;
-                            return new PriceResult("Target", title, price, "USD", fullUrl);
+                            return new PriceResult("Target", title, ext.price().toPlainString(), "USD", fullUrl, ext != null && ext.financed());
                         } catch (Exception e) {
                             log.warn("Failed to process Target item: {}", e.getMessage());
                             return null;

@@ -24,6 +24,10 @@ public class OpenAIService {
     }
 
     public String extractPrice(String rawHtml) {
+        // Persist the raw HTML the LLM is about to see so we can debug cases
+        // where the prompt strips useful qualifiers (e.g. "$10.00 /month").
+        com.agenticprice.util.RawLlmLogger.write("extractPrice", rawHtml);
+
         ChatCompletion response = client.chat().completions().create(
                 ChatCompletionCreateParams.builder()
                         .model(ChatModel.GPT_4O_MINI)

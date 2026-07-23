@@ -37,6 +37,7 @@ export default function CompareTray({ selected, loading, error, onCompare, onCle
                                 {result.productName.length > 40
                                     ? result.productName.slice(0, 40) + '…'
                                     : result.productName}
+                                {result.financed && <span className="financed-badge">Financed</span>}
                             </span>
                             <button
                                 type="button"

@@ -3,11 +3,31 @@ package com.agenticprice.prompt;
 public enum PriceHawkPrompt {
 
         EXTRACT_PRICE(
-                        "Extract the product price from this HTML. " +
-                                        "Return only the numeric price value and currency symbol (e.g. $29.99), nothing else. "
-                                        +
-                                        "If no price is found, return PRICE_NOT_FOUND. HTML: "),
+        """
+        Extract pricing from this product listing HTML.
 
+        Return ONLY valid JSON (no markdown fences, no comments, no trailing
+        commas, no extra fields) with EXACTLY this shape and types:
+
+        {
+          "price":    <number>,
+          "currency": "<ISO 4217 code>",
+          "financed": <true|false>
+        }
+
+        Rules:
+        - One-time purchase: price = the single total number; financed = false.
+        - Financed / recurring plan (e.g. "$10.75/month with $791 down for 24 months"):
+          price = (monthly * term_months) + down_payment, rounded to 2 decimals,
+          and MUST be the TOTAL cost. The example above -> price = 1049.00.
+        - Never include shipping, taxes, or promotional credits in price.
+        - Never convert units (do not turn cents into dollars, do not turn
+          monthly into yearly, do not strip a down payment).
+        - No price on the page at all:
+            {"price": null, "currency": null, "financed": false}
+
+        HTML: """),
+        
         PARSE_QUERY(
                         "Parse this product search query and return a clean product name suitable for searching retail websites. "
                                         +

@@ -36,7 +36,22 @@ type RetailerResponse = PriceComparisonResponse & {
   retailerWithResults?: string[];
 };
 
-const parsePrice = (price: string) => parseFloat(price.replace(/[^0-9.]/g, '')) || 0;
+const parsePrice = (price?: string | null): number => {
+  if (!price) return 0;
+  const n = parseFloat(price);
+  return Number.isFinite(n) ? n : 0;
+};
+const fmt = (price?: string | null, currency: string = 'USD'): string => {
+  const n = parsePrice(price);
+  // 0 (and unparseable) means "no real price". Render an em dash so the
+  // row layout is preserved but the value isn't mistaken for a free listing.
+  if (!Number.isFinite(n) || n === 0) return '—';
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(n);
+  } catch {
+    return `$${n.toFixed(2)}`;
+  }
+};
 
 const getBestDeal = (results: PriceResult[]) =>
     results.length > 0 ? results.reduce((a, b) => parsePrice(a.price) < parsePrice(b.price) ? a : b) : null;
@@ -311,11 +326,14 @@ const Dashboard = () => {
                         </span>
                                 <span>Saved from "{product.sourceQuery}"</span>
                               </div>
-                              <h3>{product.productName}</h3>
+                              <h3>
+                                {product.productName}
+                                {product.financed && <span className="financed-badge">Financed</span>}
+                              </h3>
                               <p className="saved-date">Saved {new Date(product.savedAt).toLocaleDateString()}</p>
                             </div>
                             <div className="saved-product-side">
-                              <strong>{product.price}</strong>
+                              <strong>{fmt(product.price, product.currency)}</strong>
                               <div className="saved-product-actions">
                                 <a href={product.url} target="_blank" rel="noopener noreferrer" className="view-btn">View</a>
                                 <button className="btn-alert" type="button" onClick={() => setAlertQuery(product.productName)}>Set Alert</button>
@@ -405,11 +423,11 @@ const Dashboard = () => {
                           <div className="analytics-panel">
                             <div className="analytics-card">
                               <span>Best Price</span>
-                              <strong>{bestDeal?.price}</strong>
+                              <strong>{fmt(bestDeal?.price, bestDeal?.currency)}</strong>
                             </div>
                             <div className="analytics-card">
                               <span>Highest Price</span>
-                              <strong>{getHighestPrice(response.results)?.price}</strong>
+                              <strong>{fmt(getHighestPrice(response.results)?.price, getHighestPrice(response.results)?.currency)}</strong>
                             </div>
                             <div className="analytics-card">
                               <span>Potential Savings</span>
@@ -472,6 +490,7 @@ const Dashboard = () => {
                                           <td className="rank">{i + 1}</td>
                                           <td className="product-name">
                                             {isBest && <span className="best-badge">Best Deal</span>}
+                                            {result.financed && <span className="financed-badge">Financed</span>}
                                             {result.productName}
                                           </td>
                                           <td>
@@ -479,7 +498,7 @@ const Dashboard = () => {
                                     {result.retailerName}
                                   </span>
                                           </td>
-                                          <td className="price">{result.price}</td>
+                                          <td className="price">{fmt(result.price, result.currency)}</td>
                                           <td className="savings">{calculateSavingsPercent(result, response.results).toFixed(0)}%</td>
                                           <td className="actions-cell">
                                             <a href={result.url} target="_blank" rel="noopener noreferrer" className="view-btn">View</a>
