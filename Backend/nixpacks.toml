@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ['jdk17', 'maven', 'chromium', 'nss', 'nspr', 'atk', 'cups', 'libdrm', 'dbus', 'libxkbcommon', 'xorg.libX11', 'xorg.libXcomposite', 'xorg.libXdamage', 'xorg.libXext', 'xorg.libXfixes', 'xorg.libXrandr', 'xorg.libxcb', 'mesa', 'expat', 'glib', 'pango', 'cairo', 'alsa-lib', 'at-spi2-atk', 'at-spi2-core', 'gtk3']
+
+[phases.build]
+cmds = [
+    'mvn -B -Dmaven.test.skip=true clean package',
+    'mvn exec:java -e -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium" || true'
+]

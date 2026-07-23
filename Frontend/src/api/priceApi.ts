@@ -7,6 +7,7 @@ export interface PriceResult {
     currency: string;
     url: string;
     financed?: boolean;
+    scrapedAt?: string;
 }
 
 export interface PriceComparisonResponse {
@@ -17,8 +18,9 @@ export interface PriceComparisonResponse {
     results: PriceResult[];
 }
 
-export async function searchPrices(query: string): Promise<PriceComparisonResponse> {
-    const response = await fetch(`${BASE_URL}/api/prices/search?query=${encodeURIComponent(query)}`);
+export async function searchPrices(query: string, forceRefresh = false): Promise<PriceComparisonResponse> {
+    const url = `${BASE_URL}/api/prices/search?query=${encodeURIComponent(query)}${forceRefresh ? '&forceRefresh=true' : ''}`;
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`Search failed: ${response.statusText}`);
     return response.json();
 }

@@ -41,16 +41,24 @@ const parsePrice = (price?: string | null): number => {
   const n = parseFloat(price);
   return Number.isFinite(n) ? n : 0;
 };
+
 const fmt = (price?: string | null, currency: string = 'USD'): string => {
   const n = parsePrice(price);
-  // 0 (and unparseable) means "no real price". Render an em dash so the
-  // row layout is preserved but the value isn't mistaken for a free listing.
   if (!Number.isFinite(n) || n === 0) return '—';
   try {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(n);
   } catch {
     return `$${n.toFixed(2)}`;
   }
+};
+
+const formatScrapedAt = (scrapedAt?: string): string => {
+  if (!scrapedAt) return '';
+  const diff = Math.floor((Date.now() - new Date(scrapedAt).getTime()) / 1000);
+  if (diff < 60) return 'Updated just now';
+  if (diff < 3600) return `Updated ${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `Updated ${Math.floor(diff / 3600)}h ago`;
+  return `Updated ${new Date(scrapedAt).toLocaleDateString()}`;
 };
 
 const getBestDeal = (results: PriceResult[]) =>
@@ -122,6 +130,7 @@ const Dashboard = () => {
   const [activeView, setActiveView] = useState<DashboardView>('search');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [response, setResponse] = useState<PriceComparisonResponse | null>(null);
   const [alertQuery, setAlertQuery] = useState<string | null>(null);
@@ -186,6 +195,21 @@ const Dashboard = () => {
       setError(getErrorMessage(e));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!query.trim()) return;
+    setRefreshing(true);
+    setError('');
+    try {
+      const data = await searchPrices(query.trim(), true);
+      setResponse(data);
+      setRetailerFilter('all');
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -387,7 +411,7 @@ const Dashboard = () => {
                         onChange={e => setQuery(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSearch()}
                     />
-                    <button className="search-btn" onClick={() => handleSearch()} disabled={loading}>
+                    <button className="search-btn" onClick={() => handleSearch()} disabled={loading || refreshing}>
                       {loading ? 'Searching...' : 'Search'}
                     </button>
                   </div>
@@ -405,21 +429,38 @@ const Dashboard = () => {
                 {response && !loading && (
                     <div className="results-section">
                       <div className="results-meta">
-                        <span>{response.resultCount} results for <strong>"{response.query}"</strong></span>
-                        <div className="retailer-badges">
-                          {(response.retailersQueried || []).map(r => (
-                              <span
-                                  key={r}
-                                  className={`retailer-badge ${retailersWithResults.includes(r) ? 'active' : 'inactive'}`}
-                                  style={{ borderColor: retailersWithResults.includes(r) ? RETAILER_COLORS[r] || '#555' : '#333' }}
-                              >
-                        {r}
-                      </span>
-                          ))}
+                        <div className="results-meta-left">
+                          <span>{response.resultCount} results for <strong>"{response.query}"</strong></span>
+                          <div className="retailer-badges">
+                            {(response.retailersQueried || []).map(r => (
+                                <span
+                                    key={r}
+                                    className={`retailer-badge ${retailersWithResults.includes(r) ? 'active' : 'inactive'}`}
+                                    style={{ borderColor: retailersWithResults.includes(r) ? RETAILER_COLORS[r] || '#555' : '#333' }}
+                                >
+                          {r}
+                        </span>
+                            ))}
+                          </div>
                         </div>
+                        <button
+                            className="refresh-btn"
+                            type="button"
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                        >
+                          {refreshing ? 'Refreshing...' : '↻ Refresh prices'}
+                        </button>
                       </div>
 
-                      {(response.results || []).length > 0 && (
+                      {refreshing && (
+                          <div className="loading-state">
+                            <div className="spinner" />
+                            <p>Re-scraping latest prices...</p>
+                          </div>
+                      )}
+
+                      {!refreshing && (response.results || []).length > 0 && (
                           <div className="analytics-panel">
                             <div className="analytics-card">
                               <span>Best Price</span>
@@ -440,9 +481,9 @@ const Dashboard = () => {
                           </div>
                       )}
 
-                      {(response.results || []).length === 0 ? (
+                      {!refreshing && (response.results || []).length === 0 ? (
                           <div className="no-results">No results found. Try a different search term.</div>
-                      ) : (
+                      ) : !refreshing && (
                           <>
                             <div className="results-toolbar">
                               <div className="filter-group">
@@ -498,7 +539,12 @@ const Dashboard = () => {
                                     {result.retailerName}
                                   </span>
                                           </td>
-                                          <td className="price">{fmt(result.price, result.currency)}</td>
+                                          <td className="price">
+                                            {fmt(result.price, result.currency)}
+                                            {result.scrapedAt && (
+                                                <span className="scraped-at">{formatScrapedAt(result.scrapedAt)}</span>
+                                            )}
+                                          </td>
                                           <td className="savings">{calculateSavingsPercent(result, response.results).toFixed(0)}%</td>
                                           <td className="actions-cell">
                                             <a href={result.url} target="_blank" rel="noopener noreferrer" className="view-btn">View</a>

@@ -42,6 +42,8 @@ public class ScraperService {
         String parsedQuery = openAIService.parseQuery(rawQuery);
         log.info("Parsed query '{}' -> '{}'", rawQuery, parsedQuery);
 
+        OffsetDateTime scrapedAt = OffsetDateTime.now();
+
         List<CompletableFuture<List<PriceResult>>> futures = scraperAgents.stream()
                 .map(agent -> CompletableFuture.supplyAsync(() -> {
                     log.info("Running scraper: {}", agent.getRetailerName());
@@ -52,6 +54,7 @@ public class ScraperService {
         List<PriceResult> results = futures.stream()
                 .map(CompletableFuture::join)
                 .flatMap(List::stream)
+                .peek(r -> r.setScrapedAt(scrapedAt))
                 .toList();
 
         return results;
@@ -101,18 +104,8 @@ public class ScraperService {
         });
     }
 
-    /**
-     * Converts a {@link PriceResult#getPrice()} string to a BigDecimal.
-     * The field is populated by the LLM extractor (or scraped directly) as
-     * a canonical numeric string, so no regex stripping is needed. Returns
-     * BigDecimal.ZERO on malformed input so the save can't fail.
-     */
     private static BigDecimal toBigDecimal(String priceStr) {
         if (priceStr == null || priceStr.isBlank()) return BigDecimal.ZERO;
-        // Defensive: scrapers that build prices from raw HTML may emit
-        // currency-prefixed strings (e.g. "$19.79"). Strip everything
-        // that isn't a digit or decimal point before parsing so a stray
-        // "$" doesn't silently zero a listing.
         String cleaned = priceStr.replaceAll("[^0-9.]", "");
         if (cleaned.isEmpty()) return BigDecimal.ZERO;
         try {
@@ -150,11 +143,6 @@ public class ScraperService {
         return ranked.size() == products.size() ? ranked : products;
     }
 
-    /**
-     * Strips markdown code fences from a string if present. The LLM
-     * sometimes wraps JSON in ```json ... ``` even when the prompt asks
-     * for raw JSON, and the parser fails on the leading backtick.
-     */
     private String stripMarkdownFences(String raw) {
         if (raw == null) return "";
         String cleaned = raw.trim();
