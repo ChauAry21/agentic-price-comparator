@@ -59,9 +59,33 @@ public enum PriceHawkPrompt {
                                         Treat paraphrases and equivalent feature descriptions as matching signals.
                                         Example: "Laptop with good memory" would favor results with "32 GB ram" in product_name over "16 GB memory".
 
-                                        Favor products with numeric measures on fields on interest.
-                                        Example: Query: "Earbuds with long battery life." Rank "Airpod pro 2 60H battery" over "Airpod pro 2 long battery life".
-                                        If there are no explicit request, sort based on general semantic fit, then favor lower prices.
+                                        Primary vs. secondary products: identify the primary product the user is searching for.
+                                        A result is "primary" if it IS that product (e.g. "iPhone 17 Pro 256GB").
+                                        A result is "secondary" if it is FOR, COMPATIBLE WITH, or an ACCESSORY to that product
+                                        (cases, mounts, cables, screen protectors, replacement parts, bags, stands, chargers).
+                                        Secondary products always rank at the very bottom of the list, after every primary product,
+                                        regardless of price, retailer, or input position. No primary product may appear below a secondary one.
+
+                                        Worked example of the primary/secondary rule:
+                                        Input indices and titles:
+                                          [0] "iPhone 17 Pro Silicone Case with MagSafe"   (secondary: case FOR iPhone 17 Pro)
+                                          [1] "2 Pack iPhone 17 Pro Max Screen Protector"   (secondary: protector FOR iPhone)
+                                          [2] "Apple iPhone 17 Pro, 256GB, Unlocked"        (primary: IS the iPhone 17 Pro)
+                                          [3] "Camera Lens Protector for iPhone 17 Pro"    (secondary: protector FOR iPhone)
+                                          [4] "Apple iPhone 17 Pro, 512GB, Silver"         (primary: IS the iPhone 17 Pro)
+                                        Expected output: [2, 4, 0, 1, 3]
+                                        All primary products (indices 2, 4) come first, every secondary (0, 1, 3) after.
+
+                                        Numeric signal preference: when two results are otherwise equally relevant, prefer
+                                        the one whose title includes numeric measures on the queried attributes.
+                                        Do not prefer a result solely because it has more digits in its title.
+                                        Example: Query "Earbuds with long battery life." Rank "Airpod pro 2 60H battery"
+                                        over "Airpod pro 2 long battery life".
+
+                                        Tie-break by price (lower first) only among results in the same category.
+                                        Do not price-rank a primary product below a secondary/accessory one.
+                                        If there are no explicit preferences in the query, sort by general semantic fit,
+                                        then by price within the same category.
 
                                         Return only valid JSON in this exact format:
                                         {
