@@ -7,14 +7,21 @@ interface Props {
 }
 
 export default function AlertModal({ productQuery, onClose }: Props) {
-    const [email, setEmail] = useState('');
+    // Email is pre-filled from the signed-in user's identity and read-only,
+    // because the backend derives the alert's owner email from the auth
+    // principal / X-User-Email header — whatever is typed here is ignored.
+    const [email] = useState(() => localStorage.getItem('user_email') || '');
     const [threshold, setThreshold] = useState('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
 
     async function handleSubmit() {
-        if (!email || !threshold) { setError('Both fields are required.'); return; }
+        if (!email) {
+            setError('You need to be signed in to set an alert.');
+            return;
+        }
+        if (!threshold) { setError('Threshold price is required.'); return; }
         setLoading(true);
         setError('');
         try {
@@ -40,7 +47,16 @@ export default function AlertModal({ productQuery, onClose }: Props) {
                 ) : (
                     <>
                         <label>Email</label>
-                        <input type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                        <input
+                            type="email"
+                            value={email}
+                            readOnly
+                            aria-readonly="true"
+                            style={{ background: '#1a1a1a', cursor: 'not-allowed', color: '#888' }}
+                        />
+                        <p style={{ fontSize: '12px', color: '#666', marginTop: '-8px', marginBottom: '12px' }}>
+                            Alerts are sent to the email you signed in with. Sign out and back in with a different account to change this.
+                        </p>
                         <label>Alert me when price drops below ($)</label>
                         <input type="number" placeholder="249.99" value={threshold} onChange={(e) => setThreshold(e.target.value)} />
                         {error && <p className="modal-error">{error}</p>}
