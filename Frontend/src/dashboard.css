@@ -218,7 +218,7 @@ body { overflow-x: hidden; }
 }
 
 .results-table td {
-  padding: 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid #141414;
   vertical-align: middle;
 }
@@ -277,10 +277,17 @@ body { overflow-x: hidden; }
   white-space: nowrap;
 }
 
+.results-table th:last-child,
+.results-table td:last-child {
+  width: 290px;
+  min-width: 290px;
+}
+
 .actions-cell {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .view-btn {

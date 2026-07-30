@@ -134,13 +134,28 @@ public class ScraperService {
         if (indices.isEmpty()) {
             return products;
         }
-        List<PriceResult> ranked = new ArrayList<>();
+        // Use whatever the LLM gave us, then append any products the LLM didn't
+        // reference in their original input order. This is strictly better than
+        // discarding a partial ranking, which used to silently revert the entire
+        // list to input order whenever the model returned one fewer index.
+        List<PriceResult> ranked = new ArrayList<>(products.size());
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
         for (Integer index : indices) {
-            if (index != null && index >= 0 && index < products.size()) {
+            if (index != null && index >= 0 && index < products.size() && seen.add(index)) {
                 ranked.add(products.get(index));
             }
         }
-        return ranked.size() == products.size() ? ranked : products;
+        if (ranked.size() < products.size()) {
+            log.info("getRanking: LLM returned {} unique indices for {} products; "
+                + "appending {} missing items in input order",
+                seen.size(), products.size(), products.size() - ranked.size());
+            for (int i = 0; i < products.size(); i++) {
+                if (!seen.contains(i)) {
+                    ranked.add(products.get(i));
+                }
+            }
+        }
+        return ranked;
     }
 
     private String stripMarkdownFences(String raw) {
