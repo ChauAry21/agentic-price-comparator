@@ -42,6 +42,8 @@ public class ScraperService {
         String parsedQuery = openAIService.parseQuery(rawQuery);
         log.info("Parsed query '{}' -> '{}'", rawQuery, parsedQuery);
 
+        OffsetDateTime scrapedAt = OffsetDateTime.now();
+
         List<CompletableFuture<List<PriceResult>>> futures = scraperAgents.stream()
                 .map(agent -> CompletableFuture.supplyAsync(() -> {
                     log.info("Running scraper: {}", agent.getRetailerName());
@@ -49,10 +51,13 @@ public class ScraperService {
                 }))
                 .toList();
 
-        return futures.stream()
+        List<PriceResult> results = futures.stream()
                 .map(CompletableFuture::join)
                 .flatMap(List::stream)
+                .peek(r -> r.setScrapedAt(scrapedAt))
                 .toList();
+
+        return results;
     }
 
     public void scrapeAndSave(String rawQuery) {
@@ -77,10 +82,11 @@ public class ScraperService {
                     PriceSnapshot snapshot = new PriceSnapshot();
                     snapshot.setProduct(product);
                     snapshot.setRetailer(retailer);
-                    snapshot.setPrice(parsePrice(result.getPrice()));
+                    snapshot.setPrice(toBigDecimal(result.getPrice()));
                     snapshot.setCurrency(result.getCurrency());
                     snapshot.setUrl(result.getUrl());
                     snapshot.setScrapedAt(OffsetDateTime.now());
+                    snapshot.setFinanced(result.isFinanced());
                     priceSnapshotRepository.save(snapshot);
                 } catch (Exception e) {
                     log.warn("Failed to save snapshot for {}: {}", result.getProductName(), e.getMessage());
@@ -98,11 +104,14 @@ public class ScraperService {
         });
     }
 
-    private BigDecimal parsePrice(String priceStr) {
+    private static BigDecimal toBigDecimal(String priceStr) {
+        if (priceStr == null || priceStr.isBlank()) return BigDecimal.ZERO;
+        String cleaned = priceStr.replaceAll("[^0-9.]", "");
+        if (cleaned.isEmpty()) return BigDecimal.ZERO;
         try {
-            String cleaned = priceStr.replaceAll("[^0-9.]", "");
             return new BigDecimal(cleaned);
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
+            log.warn("Unable to parse price value: {}", priceStr);
             return BigDecimal.ZERO;
         }
     }
@@ -125,20 +134,30 @@ public class ScraperService {
         if (indices.isEmpty()) {
             return products;
         }
-        List<PriceResult> ranked = new ArrayList<>();
+        // Use whatever the LLM gave us, then append any products the LLM didn't
+        // reference in their original input order. This is strictly better than
+        // discarding a partial ranking, which used to silently revert the entire
+        // list to input order whenever the model returned one fewer index.
+        List<PriceResult> ranked = new ArrayList<>(products.size());
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
         for (Integer index : indices) {
-            if (index != null && index >= 0 && index < products.size()) {
+            if (index != null && index >= 0 && index < products.size() && seen.add(index)) {
                 ranked.add(products.get(index));
             }
         }
-        return ranked.size() == products.size() ? ranked : products;
+        if (ranked.size() < products.size()) {
+            log.info("getRanking: LLM returned {} unique indices for {} products; "
+                + "appending {} missing items in input order",
+                seen.size(), products.size(), products.size() - ranked.size());
+            for (int i = 0; i < products.size(); i++) {
+                if (!seen.contains(i)) {
+                    ranked.add(products.get(i));
+                }
+            }
+        }
+        return ranked;
     }
 
-    /**
-     * Strips markdown code fences from a string if present. The LLM
-     * sometimes wraps JSON in ```json ... ``` even when the prompt asks
-     * for raw JSON, and the parser fails on the leading backtick.
-     */
     private String stripMarkdownFences(String raw) {
         if (raw == null) return "";
         String cleaned = raw.trim();

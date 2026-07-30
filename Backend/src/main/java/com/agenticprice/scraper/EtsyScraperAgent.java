@@ -62,8 +62,8 @@ public class EtsyScraperAgent implements ScraperAgent {
             if (items.isEmpty()) log.warn("Etsy page title: {}", doc.title());
             for(Element item : items.stream().limit(5).toList()) {
                 String html = item.outerHtml();
-                String price = openAIService.extractPrice(html);
-                if (price.equals("PRICE_NOT_FOUND")) continue;
+                com.agenticprice.util.PriceExtraction ext = com.agenticprice.util.PriceExtractionParser.parse(openAIService.extractPrice(html));
+                if ((ext == null || ext.price() == null)) continue;
 
 
                 String productUrl = item.select("a.listing-link").attr("href");
@@ -80,8 +80,8 @@ public class EtsyScraperAgent implements ScraperAgent {
                     return results;
                 }
 
-                if (!price.equals("PRICE_NOT_FOUND") && !title.isBlank() && !title.equals("Shop on Etsy")) {
-                    results.add(new PriceResult("Etsy", title, price, "USD", fullUrl));
+                if (!(ext == null || ext.price() == null) && !title.isBlank() && !title.equals("Shop on Etsy")) {
+                    results.add(new PriceResult("Etsy", title, ext.price().toPlainString(), "USD", fullUrl, ext.financed()));
                 }
             }
         } catch (Exception e) {

@@ -1,0 +1,54 @@
+# Spring Boot configuration for local development.
+# Copy this file to application.properties and fill in real values.
+# application.properties is gitignored; .example is the template that ships with the repo.
+
+spring.application.name=agentic-price-comparator
+
+# Port the embedded server binds to. Defaults to 8080; Railway sets this automatically.
+server.port=${PORT:8080}
+
+# OpenAI API key used by every LLM call in the app (price extraction, ranking, features).
+OPENAI_API_KEY=sk-replace-me
+
+# Postgres connection string. The transaction-mode pooler (port 6543) is what the app is
+# configured for. Format depends on your host (Supabase shown here).
+spring.datasource.url=jdbc:postgresql://<host>:<port>/postgres
+spring.datasource.username=postgres.<project-ref>
+spring.datasource.password=<db-password>
+
+# Use the public schema and let Hikari pick a sensible application name.
+spring.jpa.hibernate.ddl-auto=none
+spring.datasource.hikari.connection-init-sql=SET search_path TO public
+spring.datasource.hikari.data-source-properties.applicationName=AgenticPrice
+
+# CORS allowlist for the frontend dev servers.
+allowed.origins=http://localhost:3000,http://localhost:5173,http://localhost:5174
+
+# Scrape cadence for the scheduled price refresh job (cron expression).
+SCRAPER_CRON=0 0 */6 * * *
+
+# How long a search response stays in the cache before re-scraping. 0 disables TTL
+# expiry (rows are still served, but expired rows are never deleted). Use a positive
+# number (e.g. 2) for normal operation.
+cache.ttl.hours=2
+
+# Outbound proxy the scrapers route through (the proxy-rotator companion service).
+proxy.rotator.url=http://localhost:8001
+
+# Mail settings for price-drop alerts. Leave blank to disable.
+MAIL_USERNAME=
+MAIL_PASSWORD=
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=${MAIL_USERNAME}
+spring.mail.password=${MAIL_PASSWORD}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# Hibernate: don't request generated keys from the JDBC driver for inserts.
+spring.jpa.properties.hibernate.jdbc.use_get_generated_keys=false
+
+# Flyway is disabled — migrations are applied manually via ApplyMigrations.java
+# (see src/main/java/com/agenticprice/migrate/README.md).
+spring.flyway.enabled=false
+spring.flyway.locations=classpath:db/migration

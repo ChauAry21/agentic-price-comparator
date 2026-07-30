@@ -34,4 +34,7 @@ public class PriceSnapshot {
 
     @Column(name = "scraped_at")
     private OffsetDateTime scrapedAt;
+
+    @Column(nullable = false)
+    private boolean financed;
 }

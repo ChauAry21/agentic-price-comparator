@@ -22,8 +22,10 @@ public class PriceController {
     private final FeatureExtractionService featureExtractionService;
 
     @GetMapping("/search")
-    public ResponseEntity<PriceComparisonResponse> search(@RequestParam String query) {
-        return ResponseEntity.ok(priceComparisonAgent.compare(query));
+    public ResponseEntity<PriceComparisonResponse> search(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "false") boolean forceRefresh) {
+        return ResponseEntity.ok(priceComparisonAgent.compare(query, forceRefresh));
     }
 
     @PostMapping("/scrape")

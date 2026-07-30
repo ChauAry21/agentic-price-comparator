@@ -218,7 +218,7 @@ body { overflow-x: hidden; }
 }
 
 .results-table td {
-  padding: 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid #141414;
   vertical-align: middle;
 }
@@ -251,6 +251,20 @@ body { overflow-x: hidden; }
   text-transform: uppercase;
 }
 
+.financed-badge {
+  display: inline-block;
+  background: #3a2f1a;
+  color: #fbbf24;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-right: 6px;
+  margin-bottom: 5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .retailer-tag {
   font-size: 13px;
   font-weight: 700;
@@ -263,10 +277,17 @@ body { overflow-x: hidden; }
   white-space: nowrap;
 }
 
+.results-table th:last-child,
+.results-table td:last-child {
+  width: 290px;
+  min-width: 290px;
+}
+
 .actions-cell {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .view-btn {
@@ -1289,4 +1310,47 @@ body { overflow-x: hidden; }
     color: #666;
     padding: 2rem;
     font-style: italic;
+}
+
+.results-meta-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid #2a2a2a;
+  background: transparent;
+  color: #555;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #1a1a1a;
+  color: #ccc;
+  border-color: #3a3a3a;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.scraped-at {
+  display: block;
+  font-size: 11px;
+  color: #333;
+  font-weight: 400;
+  margin-top: 3px;
+  letter-spacing: 0.01em;
 }
