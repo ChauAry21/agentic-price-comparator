@@ -9,3 +9,4 @@ cmds = [
 
 [start]
 cmd = 'export LD_LIBRARY_PATH=$(find /nix/store -maxdepth 1 -name "*glib-*" | head -1)/lib:$(find /nix/store -maxdepth 1 -name "*atk-*" | head -1)/lib:$(find /nix/store -maxdepth 1 -name "*gtk+3-*" | head -1)/lib:$(find /nix/store -maxdepth 1 -name "*pango-*" | head -1)/lib:$(find /nix/store -maxdepth 1 -name "*cairo-*" | head -1)/lib:$(find /nix/store -maxdepth 1 -name "*nss-*" | head -1)/lib && java -jar target/agentic-price-comparator-1.0-SNAPSHOT.jar'
+

@@ -189,6 +189,9 @@ export default function FeatureTable({ response, onClose }: Props) {
                                                         className={empty ? 'compare-cell-empty' : ''}
                                                     >
                                                         {empty ? '—' : value}
+                                                        {isPrice && column.financed && (
+                                                            <span className="financed-badge financed-badge-inline">Financed</span>
+                                                        )}
                                                     </td>
                                                 );
                                             })}

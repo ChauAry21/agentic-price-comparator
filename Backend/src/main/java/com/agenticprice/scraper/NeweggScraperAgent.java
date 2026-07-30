@@ -56,8 +56,8 @@ public class NeweggScraperAgent implements ScraperAgent {
                 String priceFraction = item.select("li.price-current sup").text();
 
                 if (!title.isBlank() && !priceWhole.isBlank()) {
-                    String price = "$" + priceWhole.replace(",", "") + (priceFraction.isBlank() ? ".00" : priceFraction);
-                    results.add(new PriceResult("Newegg", title, price, "USD", productUrl));
+                    String price = priceWhole.replace(",", "") + (priceFraction.isBlank() ? ".00" : priceFraction);
+                    results.add(new PriceResult("Newegg", title, price, "USD", productUrl, false));
                 }
             }
         } catch (Exception e) {

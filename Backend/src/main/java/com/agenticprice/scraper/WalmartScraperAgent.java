@@ -43,14 +43,14 @@ public class WalmartScraperAgent implements ScraperAgent {
                     .map(item -> CompletableFuture.supplyAsync(() -> {
                         try {
                             String html = item.outerHtml();
-                            String price = openAIService.extractPrice(html);
+                            com.agenticprice.util.PriceExtraction ext = com.agenticprice.util.PriceExtractionParser.parse(openAIService.extractPrice(html));
                             String productUrl = openAIService.extractProductUrl(html);
                             String title = item.select("[data-automation-id=product-title]").text();
                             if (title.isBlank()) title = item.select("span.lh-title").text();
-                            if (price.equals("PRICE_NOT_FOUND") || title.isBlank()) return null;
+                            if ((ext == null || ext.price() == null) || title.isBlank()) return null;
                             String cleanUrl = productUrl.replace("'", "").replace("\"", "").trim();
                             String fullUrl = cleanUrl.startsWith("/") ? "https://www.walmart.com" + cleanUrl : cleanUrl;
-                            return new PriceResult("Walmart", title, price, "USD", fullUrl);
+                            return new PriceResult("Walmart", title, ext.price().toPlainString(), "USD", fullUrl, ext != null && ext.financed());
                         } catch (Exception e) {
                             log.warn("Failed to process Walmart item: {}", e.getMessage());
                             return null;

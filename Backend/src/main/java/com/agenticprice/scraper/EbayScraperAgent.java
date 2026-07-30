@@ -43,12 +43,12 @@ public class EbayScraperAgent implements ScraperAgent {
             Elements items = doc.select("li.s-item");
             for (Element item : items.stream().limit(5).toList()) {
                 String html = item.outerHtml();
-                String price = openAIService.extractPrice(html);
+                com.agenticprice.util.PriceExtraction ext = com.agenticprice.util.PriceExtractionParser.parse(openAIService.extractPrice(html));
                 String productUrl = item.select("a.s-item__link").attr("href");
                 String title = item.select(".s-item__title").text();
 
-                if (!price.equals("PRICE_NOT_FOUND") && !title.isBlank() && !title.equals("Shop on eBay")) {
-                    results.add(new PriceResult("eBay", title, price, "USD", productUrl));
+                if (!(ext == null || ext.price() == null) && !title.isBlank() && !title.equals("Shop on eBay")) {
+                    results.add(new PriceResult("eBay", title, ext.price().toPlainString(), "USD", productUrl, ext.financed()));
                 }
             }
         } catch (Exception e) {

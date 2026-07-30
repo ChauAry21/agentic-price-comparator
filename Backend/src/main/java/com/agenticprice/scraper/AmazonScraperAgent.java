@@ -42,12 +42,12 @@ public class AmazonScraperAgent implements ScraperAgent {
                     .map(item -> CompletableFuture.supplyAsync(() -> {
                         try {
                             String html = item.outerHtml();
-                            String price = openAIService.extractPrice(html);
+                            com.agenticprice.util.PriceExtraction ext = com.agenticprice.util.PriceExtractionParser.parse(openAIService.extractPrice(html));
                             String productUrl = openAIService.extractProductUrl(html);
                             String title = item.select("h2 span").text();
-                            if (price.equals("PRICE_NOT_FOUND") || title.isBlank()) return null;
+                            if ((ext == null || ext.price() == null) || title.isBlank()) return null;
                             String fullUrl = productUrl.startsWith("/") ? "https://www.amazon.com" + productUrl : productUrl;
-                            return new PriceResult("Amazon", title, price, "USD", fullUrl);
+                            return new PriceResult("Amazon", title, ext.price().toPlainString(), "USD", fullUrl, ext != null && ext.financed());
                         } catch (Exception e) {
                             log.warn("Failed to process Amazon item: {}", e.getMessage());
                             return null;

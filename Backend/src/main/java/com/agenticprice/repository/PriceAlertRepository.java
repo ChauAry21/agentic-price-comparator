@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public interface PriceAlertRepository extends JpaRepository<PriceAlert, UUID> {
     List<PriceAlert> findByActiveTrue();
+    List<PriceAlert> findByEmail(String email);
 }

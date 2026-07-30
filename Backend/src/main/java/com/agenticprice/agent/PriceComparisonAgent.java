@@ -34,22 +34,31 @@ public class PriceComparisonAgent {
     private int cacheTtlHours;
 
     public PriceComparisonResponse compare(String query) {
+        return compare(query, false);
+    }
+
+    public PriceComparisonResponse compare(String query, boolean forceRefresh) {
         String normalizedQuery = query.trim().toLowerCase();
 
-        Optional<SearchCache> cached = searchCacheRepository.findByQueryIgnoreCase(normalizedQuery);
-        if (cached.isPresent()) {
-            SearchCache entry = cached.get();
-            if (entry.getCachedAt().isAfter(OffsetDateTime.now().minusHours(cacheTtlHours))) {
-                log.info("Cache hit for query '{}'", normalizedQuery);
-                try {
-                    return objectMapper.readValue(entry.getResponseJson(), PriceComparisonResponse.class);
-                } catch (Exception e) {
-                    log.warn("Failed to deserialize cached response for '{}': {}", normalizedQuery, e.getMessage());
+        if (!forceRefresh) {
+            Optional<SearchCache> cached = searchCacheRepository.findByQueryIgnoreCase(normalizedQuery);
+            if (cached.isPresent()) {
+                SearchCache entry = cached.get();
+                if (entry.getCachedAt().isAfter(OffsetDateTime.now().minusHours(cacheTtlHours))) {
+                    log.info("Cache hit for query '{}'", normalizedQuery);
+                    try {
+                        return objectMapper.readValue(entry.getResponseJson(), PriceComparisonResponse.class);
+                    } catch (Exception e) {
+                        log.warn("Failed to deserialize cached response for '{}': {}", normalizedQuery, e.getMessage());
+                    }
+                } else {
+                    log.info("Cache expired for query '{}'", normalizedQuery);
+                    searchCacheRepository.deleteByQueryIgnoreCase(normalizedQuery);
                 }
-            } else {
-                log.info("Cache expired for query '{}'", normalizedQuery);
-                searchCacheRepository.deleteByQueryIgnoreCase(normalizedQuery);
             }
+        } else {
+            log.info("Force refresh for query '{}', clearing cache...", normalizedQuery);
+            searchCacheRepository.deleteByQueryIgnoreCase(normalizedQuery);
         }
 
         log.info("Cache miss for query '{}', scraping...", normalizedQuery);
@@ -105,16 +114,29 @@ public class PriceComparisonAgent {
         return response;
     }
 
+    private BigDecimal toBigDecimal(PriceResult r) {
+        String s = r.getPrice();
+        if (s == null || s.isBlank()) return BigDecimal.ZERO;
+        String cleaned = s.replaceAll("[^0-9.]", "");
+        if (cleaned.isEmpty()) return BigDecimal.ZERO;
+        try {
+            return new BigDecimal(cleaned);
+        } catch (NumberFormatException e) {
+            log.warn("Unable to parse stored price value: {}", s);
+            return BigDecimal.ZERO;
+        }
+    }
+
     private PriceResult getBestDeal(List<PriceResult> results) {
         return results.stream()
-                .filter(result -> parsePrice(result.getPrice()).compareTo(BigDecimal.ZERO) > 0)
-                .min(Comparator.comparing(result -> parsePrice(result.getPrice())))
+                .filter(result -> toBigDecimal(result).compareTo(BigDecimal.ZERO) > 0)
+                .min(Comparator.comparing(result -> toBigDecimal(result)))
                 .orElse(null);
     }
 
     private BigDecimal getLowestPrice(List<PriceResult> results) {
         return results.stream()
-                .map(result -> parsePrice(result.getPrice()))
+                .map(result -> toBigDecimal(result))
                 .filter(price -> price.compareTo(BigDecimal.ZERO) > 0)
                 .min(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);
@@ -122,7 +144,7 @@ public class PriceComparisonAgent {
 
     private BigDecimal getHighestPrice(List<PriceResult> results) {
         return results.stream()
-                .map(result -> parsePrice(result.getPrice()))
+                .map(result -> toBigDecimal(result))
                 .filter(price -> price.compareTo(BigDecimal.ZERO) > 0)
                 .max(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);
@@ -130,27 +152,13 @@ public class PriceComparisonAgent {
 
     private BigDecimal getAveragePrice(List<PriceResult> results) {
         List<BigDecimal> prices = results.stream()
-                .map(result -> parsePrice(result.getPrice()))
+                .map(result -> toBigDecimal(result))
                 .filter(price -> price.compareTo(BigDecimal.ZERO) > 0)
                 .toList();
         if (prices.isEmpty())
             return BigDecimal.ZERO;
         BigDecimal total = prices.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         return total.divide(BigDecimal.valueOf(prices.size()), 2, RoundingMode.HALF_UP);
-    }
-
-    private BigDecimal parsePrice(String price) {
-        if (price == null || price.isBlank())
-            return BigDecimal.ZERO;
-        try {
-            String cleaned = price.replaceAll("[^0-9.]", "");
-            if (cleaned.isBlank())
-                return BigDecimal.ZERO;
-            return new BigDecimal(cleaned);
-        } catch (NumberFormatException e) {
-            log.warn("Unable to parse price value: {}", price);
-            return BigDecimal.ZERO;
-        }
     }
 
     private String extractProductKey(String url) {

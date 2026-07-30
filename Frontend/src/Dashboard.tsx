@@ -36,7 +36,30 @@ type RetailerResponse = PriceComparisonResponse & {
   retailerWithResults?: string[];
 };
 
-const parsePrice = (price: string) => parseFloat(price.replace(/[^0-9.]/g, '')) || 0;
+const parsePrice = (price?: string | null): number => {
+  if (!price) return 0;
+  const n = parseFloat(price);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const fmt = (price?: string | null, currency: string = 'USD'): string => {
+  const n = parsePrice(price);
+  if (!Number.isFinite(n) || n === 0) return '—';
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(n);
+  } catch {
+    return `$${n.toFixed(2)}`;
+  }
+};
+
+const formatScrapedAt = (scrapedAt?: string): string => {
+  if (!scrapedAt) return '';
+  const diff = Math.floor((Date.now() - new Date(scrapedAt).getTime()) / 1000);
+  if (diff < 60) return 'Updated just now';
+  if (diff < 3600) return `Updated ${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `Updated ${Math.floor(diff / 3600)}h ago`;
+  return `Updated ${new Date(scrapedAt).toLocaleDateString()}`;
+};
 
 const getBestDeal = (results: PriceResult[]) =>
     results.length > 0 ? results.reduce((a, b) => parsePrice(a.price) < parsePrice(b.price) ? a : b) : null;
@@ -107,6 +130,7 @@ const Dashboard = () => {
   const [activeView, setActiveView] = useState<DashboardView>('search');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [response, setResponse] = useState<PriceComparisonResponse | null>(null);
   const [alertQuery, setAlertQuery] = useState<string | null>(null);
@@ -171,6 +195,21 @@ const Dashboard = () => {
       setError(getErrorMessage(e));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!query.trim()) return;
+    setRefreshing(true);
+    setError('');
+    try {
+      const data = await searchPrices(query.trim(), true);
+      setResponse(data);
+      setRetailerFilter('all');
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -311,11 +350,14 @@ const Dashboard = () => {
                         </span>
                                 <span>Saved from "{product.sourceQuery}"</span>
                               </div>
-                              <h3>{product.productName}</h3>
+                              <h3>
+                                {product.productName}
+                                {product.financed && <span className="financed-badge">Financed</span>}
+                              </h3>
                               <p className="saved-date">Saved {new Date(product.savedAt).toLocaleDateString()}</p>
                             </div>
                             <div className="saved-product-side">
-                              <strong>{product.price}</strong>
+                              <strong>{fmt(product.price, product.currency)}</strong>
                               <div className="saved-product-actions">
                                 <a href={product.url} target="_blank" rel="noopener noreferrer" className="view-btn">View</a>
                                 <button className="btn-alert" type="button" onClick={() => setAlertQuery(product.productName)}>Set Alert</button>
@@ -369,7 +411,7 @@ const Dashboard = () => {
                         onChange={e => setQuery(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSearch()}
                     />
-                    <button className="search-btn" onClick={() => handleSearch()} disabled={loading}>
+                    <button className="search-btn" onClick={() => handleSearch()} disabled={loading || refreshing}>
                       {loading ? 'Searching...' : 'Search'}
                     </button>
                   </div>
@@ -387,29 +429,46 @@ const Dashboard = () => {
                 {response && !loading && (
                     <div className="results-section">
                       <div className="results-meta">
-                        <span>{response.resultCount} results for <strong>"{response.query}"</strong></span>
-                        <div className="retailer-badges">
-                          {(response.retailersQueried || []).map(r => (
-                              <span
-                                  key={r}
-                                  className={`retailer-badge ${retailersWithResults.includes(r) ? 'active' : 'inactive'}`}
-                                  style={{ borderColor: retailersWithResults.includes(r) ? RETAILER_COLORS[r] || '#555' : '#333' }}
-                              >
-                        {r}
-                      </span>
-                          ))}
+                        <div className="results-meta-left">
+                          <span>{response.resultCount} results for <strong>"{response.query}"</strong></span>
+                          <div className="retailer-badges">
+                            {(response.retailersQueried || []).map(r => (
+                                <span
+                                    key={r}
+                                    className={`retailer-badge ${retailersWithResults.includes(r) ? 'active' : 'inactive'}`}
+                                    style={{ borderColor: retailersWithResults.includes(r) ? RETAILER_COLORS[r] || '#555' : '#333' }}
+                                >
+                          {r}
+                        </span>
+                            ))}
+                          </div>
                         </div>
+                        <button
+                            className="refresh-btn"
+                            type="button"
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                        >
+                          {refreshing ? 'Refreshing...' : '↻ Refresh prices'}
+                        </button>
                       </div>
 
-                      {(response.results || []).length > 0 && (
+                      {refreshing && (
+                          <div className="loading-state">
+                            <div className="spinner" />
+                            <p>Re-scraping latest prices...</p>
+                          </div>
+                      )}
+
+                      {!refreshing && (response.results || []).length > 0 && (
                           <div className="analytics-panel">
                             <div className="analytics-card">
                               <span>Best Price</span>
-                              <strong>{bestDeal?.price}</strong>
+                              <strong>{fmt(bestDeal?.price, bestDeal?.currency)}</strong>
                             </div>
                             <div className="analytics-card">
                               <span>Highest Price</span>
-                              <strong>{getHighestPrice(response.results)?.price}</strong>
+                              <strong>{fmt(getHighestPrice(response.results)?.price, getHighestPrice(response.results)?.currency)}</strong>
                             </div>
                             <div className="analytics-card">
                               <span>Potential Savings</span>
@@ -422,9 +481,9 @@ const Dashboard = () => {
                           </div>
                       )}
 
-                      {(response.results || []).length === 0 ? (
+                      {!refreshing && (response.results || []).length === 0 ? (
                           <div className="no-results">No results found. Try a different search term.</div>
-                      ) : (
+                      ) : !refreshing && (
                           <>
                             <div className="results-toolbar">
                               <div className="filter-group">
@@ -472,6 +531,7 @@ const Dashboard = () => {
                                           <td className="rank">{i + 1}</td>
                                           <td className="product-name">
                                             {isBest && <span className="best-badge">Best Deal</span>}
+                                            {result.financed && <span className="financed-badge">Financed</span>}
                                             {result.productName}
                                           </td>
                                           <td>
@@ -479,7 +539,12 @@ const Dashboard = () => {
                                     {result.retailerName}
                                   </span>
                                           </td>
-                                          <td className="price">{result.price}</td>
+                                          <td className="price">
+                                            {fmt(result.price, result.currency)}
+                                            {result.scrapedAt && (
+                                                <span className="scraped-at">{formatScrapedAt(result.scrapedAt)}</span>
+                                            )}
+                                          </td>
                                           <td className="savings">{calculateSavingsPercent(result, response.results).toFixed(0)}%</td>
                                           <td className="actions-cell">
                                             <a href={result.url} target="_blank" rel="noopener noreferrer" className="view-btn">View</a>

@@ -3,11 +3,31 @@ package com.agenticprice.prompt;
 public enum PriceHawkPrompt {
 
         EXTRACT_PRICE(
-                        "Extract the product price from this HTML. " +
-                                        "Return only the numeric price value and currency symbol (e.g. $29.99), nothing else. "
-                                        +
-                                        "If no price is found, return PRICE_NOT_FOUND. HTML: "),
+        """
+        Extract pricing from this product listing HTML.
 
+        Return ONLY valid JSON (no markdown fences, no comments, no trailing
+        commas, no extra fields) with EXACTLY this shape and types:
+
+        {
+          "price":    <number>,
+          "currency": "<ISO 4217 code>",
+          "financed": <true|false>
+        }
+
+        Rules:
+        - One-time purchase: price = the single total number; financed = false.
+        - Financed / recurring plan (e.g. "$10.75/month with $791 down for 24 months"):
+          price = (monthly * term_months) + down_payment, rounded to 2 decimals,
+          and MUST be the TOTAL cost. The example above -> price = 1049.00.
+        - Never include shipping, taxes, or promotional credits in price.
+        - Never convert units (do not turn cents into dollars, do not turn
+          monthly into yearly, do not strip a down payment).
+        - No price on the page at all:
+            {"price": null, "currency": null, "financed": false}
+
+        HTML: """),
+        
         PARSE_QUERY(
                         "Parse this product search query and return a clean product name suitable for searching retail websites. "
                                         +
@@ -39,9 +59,33 @@ public enum PriceHawkPrompt {
                                         Treat paraphrases and equivalent feature descriptions as matching signals.
                                         Example: "Laptop with good memory" would favor results with "32 GB ram" in product_name over "16 GB memory".
 
-                                        Favor products with numeric measures on fields on interest.
-                                        Example: Query: "Earbuds with long battery life." Rank "Airpod pro 2 60H battery" over "Airpod pro 2 long battery life".
-                                        If there are no explicit request, sort based on general semantic fit, then favor lower prices.
+                                        Primary vs. secondary products: identify the primary product the user is searching for.
+                                        A result is "primary" if it IS that product (e.g. "iPhone 17 Pro 256GB").
+                                        A result is "secondary" if it is FOR, COMPATIBLE WITH, or an ACCESSORY to that product
+                                        (cases, mounts, cables, screen protectors, replacement parts, bags, stands, chargers).
+                                        Secondary products always rank at the very bottom of the list, after every primary product,
+                                        regardless of price, retailer, or input position. No primary product may appear below a secondary one.
+
+                                        Worked example of the primary/secondary rule:
+                                        Input indices and titles:
+                                          [0] "iPhone 17 Pro Silicone Case with MagSafe"   (secondary: case FOR iPhone 17 Pro)
+                                          [1] "2 Pack iPhone 17 Pro Max Screen Protector"   (secondary: protector FOR iPhone)
+                                          [2] "Apple iPhone 17 Pro, 256GB, Unlocked"        (primary: IS the iPhone 17 Pro)
+                                          [3] "Camera Lens Protector for iPhone 17 Pro"    (secondary: protector FOR iPhone)
+                                          [4] "Apple iPhone 17 Pro, 512GB, Silver"         (primary: IS the iPhone 17 Pro)
+                                        Expected output: [2, 4, 0, 1, 3]
+                                        All primary products (indices 2, 4) come first, every secondary (0, 1, 3) after.
+
+                                        Numeric signal preference: when two results are otherwise equally relevant, prefer
+                                        the one whose title includes numeric measures on the queried attributes.
+                                        Do not prefer a result solely because it has more digits in its title.
+                                        Example: Query "Earbuds with long battery life." Rank "Airpod pro 2 60H battery"
+                                        over "Airpod pro 2 long battery life".
+
+                                        Tie-break by price (lower first) only among results in the same category.
+                                        Do not price-rank a primary product below a secondary/accessory one.
+                                        If there are no explicit preferences in the query, sort by general semantic fit,
+                                        then by price within the same category.
 
                                         Return only valid JSON in this exact format:
                                         {
