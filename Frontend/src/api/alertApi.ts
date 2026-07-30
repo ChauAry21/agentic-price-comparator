@@ -19,19 +19,27 @@ export interface Alert {
 export async function createAlert(data: CreateAlertRequest): Promise<void> {
     const res = await fetch(`${API_URL}/api/alerts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-User-Email': localStorage.getItem('user_email') || '',
+        },
         body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Failed to create alert');
 }
 
 export async function getAlerts(): Promise<Alert[]> {
-    const res = await fetch(`${API_URL}/api/alerts`);
+    const res = await fetch(`${API_URL}/api/alerts`, {
+        headers: { 'X-User-Email': localStorage.getItem('user_email') || '' },
+    });
     if (!res.ok) throw new Error('Failed to fetch alerts');
     return res.json();
 }
 
 export async function deleteAlert(id: string): Promise<void> {
-    const res = await fetch(`${API_URL}/api/alerts/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${API_URL}/api/alerts/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-User-Email': localStorage.getItem('user_email') || '' },
+    });
     if (!res.ok) throw new Error('Failed to delete alert');
 }

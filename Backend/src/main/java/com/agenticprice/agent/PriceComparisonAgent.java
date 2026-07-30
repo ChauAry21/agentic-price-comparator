@@ -34,22 +34,31 @@ public class PriceComparisonAgent {
     private int cacheTtlHours;
 
     public PriceComparisonResponse compare(String query) {
+        return compare(query, false);
+    }
+
+    public PriceComparisonResponse compare(String query, boolean forceRefresh) {
         String normalizedQuery = query.trim().toLowerCase();
 
-        Optional<SearchCache> cached = searchCacheRepository.findByQueryIgnoreCase(normalizedQuery);
-        if (cached.isPresent()) {
-            SearchCache entry = cached.get();
-            if (entry.getCachedAt().isAfter(OffsetDateTime.now().minusHours(cacheTtlHours))) {
-                log.info("Cache hit for query '{}'", normalizedQuery);
-                try {
-                    return objectMapper.readValue(entry.getResponseJson(), PriceComparisonResponse.class);
-                } catch (Exception e) {
-                    log.warn("Failed to deserialize cached response for '{}': {}", normalizedQuery, e.getMessage());
+        if (!forceRefresh) {
+            Optional<SearchCache> cached = searchCacheRepository.findByQueryIgnoreCase(normalizedQuery);
+            if (cached.isPresent()) {
+                SearchCache entry = cached.get();
+                if (entry.getCachedAt().isAfter(OffsetDateTime.now().minusHours(cacheTtlHours))) {
+                    log.info("Cache hit for query '{}'", normalizedQuery);
+                    try {
+                        return objectMapper.readValue(entry.getResponseJson(), PriceComparisonResponse.class);
+                    } catch (Exception e) {
+                        log.warn("Failed to deserialize cached response for '{}': {}", normalizedQuery, e.getMessage());
+                    }
+                } else {
+                    log.info("Cache expired for query '{}'", normalizedQuery);
+                    searchCacheRepository.deleteByQueryIgnoreCase(normalizedQuery);
                 }
-            } else {
-                log.info("Cache expired for query '{}'", normalizedQuery);
-                searchCacheRepository.deleteByQueryIgnoreCase(normalizedQuery);
             }
+        } else {
+            log.info("Force refresh for query '{}', clearing cache...", normalizedQuery);
+            searchCacheRepository.deleteByQueryIgnoreCase(normalizedQuery);
         }
 
         log.info("Cache miss for query '{}', scraping...", normalizedQuery);
@@ -105,18 +114,9 @@ public class PriceComparisonAgent {
         return response;
     }
 
-    /**
-     * Converts {@link PriceResult#getPrice()} to a BigDecimal. Since the field
-     * is now always a canonical numeric string written by the LLM extractor
-     * (or scraped directly from HTML), this is a thin wrapper that handles
-     * the null/blank cases only.
-     */
     private BigDecimal toBigDecimal(PriceResult r) {
         String s = r.getPrice();
         if (s == null || s.isBlank()) return BigDecimal.ZERO;
-        // Defensive: HTML-only scrapers (e.g. Newegg) may have written
-        // a currency-prefixed string. Strip non-numeric chars before
-        // parsing so the value isn't silently dropped to zero.
         String cleaned = s.replaceAll("[^0-9.]", "");
         if (cleaned.isEmpty()) return BigDecimal.ZERO;
         try {
@@ -160,8 +160,6 @@ public class PriceComparisonAgent {
         BigDecimal total = prices.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         return total.divide(BigDecimal.valueOf(prices.size()), 2, RoundingMode.HALF_UP);
     }
-
-
 
     private String extractProductKey(String url) {
         if (url == null)

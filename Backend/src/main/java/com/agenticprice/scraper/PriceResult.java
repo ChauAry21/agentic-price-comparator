@@ -1,6 +1,7 @@
 package com.agenticprice.scraper;
 
 import lombok.Data;
+import java.time.OffsetDateTime;
 
 @Data
 public class PriceResult {
@@ -10,6 +11,7 @@ public class PriceResult {
     private String currency;
     private String url;
     private boolean financed;
+    private OffsetDateTime scrapedAt;
 
     public PriceResult() {
     }
@@ -28,8 +30,6 @@ public class PriceResult {
         this.financed = financed;
     }
 
-    // Convenience overload for callers that don't know whether a listing is
-    // financed (treated as one-time price).
     public PriceResult(String retailerName,
                        String productName,
                        String price,
