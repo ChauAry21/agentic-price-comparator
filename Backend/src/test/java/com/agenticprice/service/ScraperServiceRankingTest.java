@@ -104,7 +104,8 @@ class ScraperServiceRankingTest {
 
         List<PriceResult> ranked = service.getRanking(products, "best earbuds");
 
-        assertEquals(products, ranked);
+        assertEquals(List.of("Walmart", "Amazon", "Newegg"),
+                ranked.stream().map(PriceResult::getRetailerName).toList());
     }
 
     private static PriceResult product(String retailer, String name, String price, String url) {
